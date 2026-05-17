@@ -1,0 +1,7 @@
+#!/bin/sh
+
+if [ -r /proc/loadavg ]; then
+    awk '{print $1}' /proc/loadavg
+else
+    uptime 2>/dev/null | awk -F'load average: ' '{print $2}' | awk -F, '{print $1}'
+fi

@@ -1,0 +1,58 @@
+#!/bin/sh
+
+step=5
+
+signal_bar() {
+    command -v pkill >/dev/null 2>&1 && pkill -RTMIN+11 i3blocks 2>/dev/null || true
+}
+
+notify_action() {
+    title=$1
+    body=$2
+
+    if command -v dunstify >/dev/null 2>&1; then
+        dunstify -a i3blocks -u low -r 9101 "$title" "$body" >/dev/null 2>&1 || true
+    elif command -v notify-send >/dev/null 2>&1; then
+        notify-send -a i3blocks -u low "$title" "$body" >/dev/null 2>&1 || true
+    fi
+}
+
+case "${BLOCK_BUTTON:-}" in
+    1|4)
+        action=up
+        ;;
+    3|5)
+        action=down
+        ;;
+    *)
+        action=${1:-}
+        ;;
+esac
+
+case "$action" in
+    up)
+        command -v brightnessctl >/dev/null 2>&1 && brightnessctl set "+$step%" >/dev/null 2>&1 || true
+        signal_bar
+        ;;
+    down)
+        command -v brightnessctl >/dev/null 2>&1 && brightnessctl set "$step%-" >/dev/null 2>&1 || true
+        signal_bar
+        ;;
+esac
+
+if command -v brightnessctl >/dev/null 2>&1; then
+    brightnessctl -m 2>/dev/null | awk -F, '{print $4; exit}'
+else
+    printf 'n/a\n'
+fi
+
+case "$action" in
+    up|down)
+        if command -v brightnessctl >/dev/null 2>&1; then
+            value=$(brightnessctl -m 2>/dev/null | awk -F, '{print $4; exit}')
+        else
+            value=n/a
+        fi
+        notify_action "Brightness" "$value"
+        ;;
+esac

@@ -1,0 +1,88 @@
+#!/bin/sh
+
+battery_details() {
+    if ! command -v upower >/dev/null 2>&1; then
+        printf 'upower is not installed'
+        return 0
+    fi
+
+    device=$(upower -e 2>/dev/null | awk '/battery/ { print; exit }')
+    if [ -z "$device" ]; then
+        printf 'No battery details available'
+        return 0
+    fi
+
+    upower -i "$device" 2>/dev/null | awk -F: '
+        /state|percentage|time to empty|time to full|energy-rate/ {
+            key=$1;
+            value=$2;
+            gsub(/^[ \t]+|[ \t]+$/, "", key);
+            gsub(/^[ \t]+|[ \t]+$/, "", value);
+            if (value != "") printf "%s: %s\n", key, value;
+        }
+    '
+}
+
+notify_battery() {
+    body=$(battery_details)
+
+    if command -v dunstify >/dev/null 2>&1; then
+        dunstify -a i3blocks -u low -r 9104 "Battery" "$body" >/dev/null 2>&1 || true
+    elif command -v notify-send >/dev/null 2>&1; then
+        notify-send -a i3blocks -u low "Battery" "$body" >/dev/null 2>&1 || true
+    fi
+}
+
+case "${BLOCK_BUTTON:-}" in
+    1|3)
+        notify_battery
+        ;;
+esac
+
+for battery in /sys/class/power_supply/BAT*; do
+    [ -d "$battery" ] || continue
+
+    capacity=$(cat "$battery/capacity" 2>/dev/null || printf '')
+    status=$(cat "$battery/status" 2>/dev/null || printf '')
+
+    if [ -n "$capacity" ]; then
+        case "$status" in
+            Charging)
+                suffix="+"
+                ;;
+            Discharging)
+                suffix="-"
+                ;;
+            Full)
+                suffix="full"
+                ;;
+            *)
+                suffix=""
+                ;;
+        esac
+
+        if [ "$suffix" = "full" ]; then
+            printf '%s%% full\n' "$capacity"
+        else
+            printf '%s%%%s\n' "$capacity" "$suffix"
+        fi
+
+        case "$status" in
+            Charging)
+                printf '%s%%+\n' "$capacity"
+                ;;
+            Full)
+                printf '%s%% full\n' "$capacity"
+                ;;
+            Discharging)
+                if [ "$capacity" -le 15 ] 2>/dev/null; then
+                    printf '%s%%%s\n' "$capacity" "$suffix"
+                fi
+                ;;
+        esac
+        exit 0
+    fi
+done
+
+printf 'AC\n'
+printf 'AC\n'

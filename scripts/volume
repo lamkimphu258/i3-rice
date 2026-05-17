@@ -1,0 +1,164 @@
+#!/bin/sh
+
+step=5
+
+signal_bar() {
+    command -v pkill >/dev/null 2>&1 && pkill -RTMIN+10 i3blocks 2>/dev/null || true
+}
+
+notify_action() {
+    title=$1
+    body=$2
+
+    if command -v dunstify >/dev/null 2>&1; then
+        dunstify -a i3blocks -u low -r 9100 "$title" "$body" >/dev/null 2>&1 || true
+    elif command -v notify-send >/dev/null 2>&1; then
+        notify-send -a i3blocks -u low "$title" "$body" >/dev/null 2>&1 || true
+    fi
+}
+
+open_mixer() {
+    if command -v pavucontrol >/dev/null 2>&1; then
+        pavucontrol >/dev/null 2>&1 &
+    fi
+}
+
+wpctl_status() {
+    wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null | awk '
+        /MUTED/ {
+            print "muted";
+            found=1;
+            exit;
+        }
+        /Volume:/ {
+            printf "%d%%\n", ($2 * 100) + 0.5;
+            found=1;
+            exit;
+        }
+        END {
+            if (!found) print "n/a";
+        }
+    '
+}
+
+pactl_status() {
+    muted=$(pactl get-sink-mute @DEFAULT_SINK@ 2>/dev/null | awk '{print $2}')
+    volume=$(pactl get-sink-volume @DEFAULT_SINK@ 2>/dev/null | awk -F/ 'NR == 1 {gsub(/ /, "", $2); print $2; exit}')
+
+    if [ "$muted" = "yes" ]; then
+        printf 'muted\n'
+    elif [ -n "$volume" ]; then
+        printf '%s\n' "$volume"
+    else
+        printf 'n/a\n'
+    fi
+}
+
+pactl_volume_percent() {
+    pactl get-sink-volume @DEFAULT_SINK@ 2>/dev/null | awk -F/ '
+        NR == 1 {
+            gsub(/[% ]/, "", $2);
+            print int($2);
+            exit;
+        }
+    '
+}
+
+amixer_status() {
+    amixer get Master 2>/dev/null | awk -F'[][]' '
+        /%/ { volume=$2; state=$4 }
+        END {
+            if (state == "off") print "muted";
+            else if (volume != "") print volume;
+            else print "n/a";
+        }
+    '
+}
+
+case "${BLOCK_BUTTON:-}" in
+    1)
+        action=mute
+        ;;
+    3)
+        action=mixer
+        ;;
+    4)
+        action=up
+        ;;
+    5)
+        action=down
+        ;;
+    *)
+        action=${1:-}
+        ;;
+esac
+
+case "$action" in
+    up)
+        if command -v wpctl >/dev/null 2>&1; then
+            wpctl set-mute @DEFAULT_AUDIO_SINK@ 0 >/dev/null 2>&1 || true
+            wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ "$step%+" >/dev/null 2>&1 || true
+        elif command -v pactl >/dev/null 2>&1; then
+            pactl set-sink-mute @DEFAULT_SINK@ 0 >/dev/null 2>&1 || true
+            current=$(pactl_volume_percent)
+            case "$current" in
+                ''|*[!0-9]*)
+                    pactl set-sink-volume @DEFAULT_SINK@ "+$step%" >/dev/null 2>&1 || true
+                    ;;
+                *)
+                    next=$((current + step))
+                    [ "$next" -gt 100 ] && next=100
+                    pactl set-sink-volume @DEFAULT_SINK@ "$next%" >/dev/null 2>&1 || true
+                    ;;
+            esac
+        elif command -v amixer >/dev/null 2>&1; then
+            amixer -q set Master unmute "$step%+" >/dev/null 2>&1 || true
+        fi
+        signal_bar
+        ;;
+    down)
+        if command -v wpctl >/dev/null 2>&1; then
+            wpctl set-volume @DEFAULT_AUDIO_SINK@ "$step%-" >/dev/null 2>&1 || true
+        elif command -v pactl >/dev/null 2>&1; then
+            pactl set-sink-volume @DEFAULT_SINK@ "-$step%" >/dev/null 2>&1 || true
+        elif command -v amixer >/dev/null 2>&1; then
+            amixer -q set Master "$step%-" >/dev/null 2>&1 || true
+        fi
+        signal_bar
+        ;;
+    mute)
+        if command -v wpctl >/dev/null 2>&1; then
+            wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle >/dev/null 2>&1 || true
+        elif command -v pactl >/dev/null 2>&1; then
+            pactl set-sink-mute @DEFAULT_SINK@ toggle >/dev/null 2>&1 || true
+        elif command -v amixer >/dev/null 2>&1; then
+            amixer -q set Master toggle >/dev/null 2>&1 || true
+        fi
+        signal_bar
+        ;;
+    mixer)
+        open_mixer
+        ;;
+esac
+
+if command -v wpctl >/dev/null 2>&1; then
+    value=$(wpctl_status)
+elif command -v pactl >/dev/null 2>&1; then
+    value=$(pactl_status)
+elif command -v amixer >/dev/null 2>&1; then
+    value=$(amixer_status)
+else
+    value="n/a"
+fi
+
+printf '%s\n' "$value"
+
+if [ "$value" = "muted" ] || [ "$value" = "n/a" ]; then
+    printf '%s\n' "$value"
+fi
+
+case "$action" in
+    up|down|mute)
+        notify_action "Volume" "$value"
+        ;;
+esac

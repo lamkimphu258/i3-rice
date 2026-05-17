@@ -1,0 +1,155 @@
+#!/bin/sh
+
+set -eu
+
+command_name=${1:-rotate}
+interval=${I3_WALLPAPER_INTERVAL:-900}
+config_home=${XDG_CONFIG_HOME:-"$HOME/.config"}
+wallpaper_dir=${I3_WALLPAPER_DIR:-"$config_home/wallpapers"}
+runtime_base=${XDG_RUNTIME_DIR:-/tmp}
+runtime_dir=$runtime_base/i3-rice
+pid_file=$runtime_dir/wallpaper.pid
+state_file=$runtime_dir/wallpaper-current
+
+case "$interval" in
+    ''|*[!0-9]*)
+        interval=900
+        ;;
+esac
+
+if [ "$interval" -lt 1 ]; then
+    interval=900
+fi
+
+list_wallpapers() {
+    [ -d "$wallpaper_dir" ] || return 1
+
+    find "$wallpaper_dir" -type f \( \
+        -iname '*.png' -o \
+        -iname '*.jpg' -o \
+        -iname '*.jpeg' -o \
+        -iname '*.webp' -o \
+        -iname '*.xpm' -o \
+        -iname '*.bmp' \
+    \) | sort
+}
+
+next_wallpaper() {
+    current=
+    if [ -f "$state_file" ]; then
+        current=$(cat "$state_file")
+    fi
+
+    list_wallpapers | awk -v current="$current" '
+        NR == 1 {
+            first = $0
+        }
+        $0 == current {
+            found = 1
+            next
+        }
+        found && next_file == "" {
+            next_file = $0
+        }
+        END {
+            if (next_file != "") {
+                print next_file
+            } else if (first != "") {
+                print first
+            }
+        }
+    '
+}
+
+set_wallpaper() {
+    mkdir -p "$runtime_dir"
+
+    if ! command -v feh >/dev/null 2>&1; then
+        printf 'wallpaper: feh is not installed\n' >&2
+        return 1
+    fi
+
+    image=$(next_wallpaper)
+    if [ -z "$image" ]; then
+        printf 'wallpaper: no supported images found in %s\n' "$wallpaper_dir" >&2
+        return 1
+    fi
+
+    feh --bg-fill "$image"
+    printf '%s\n' "$image" > "$state_file"
+}
+
+running_pid() {
+    [ -f "$pid_file" ] || return 1
+    read pid < "$pid_file" || return 1
+
+    case "$pid" in
+        ''|*[!0-9]*)
+            return 1
+            ;;
+    esac
+
+    if [ "$pid" -ne "$$" ] && kill -0 "$pid" 2>/dev/null; then
+        printf '%s\n' "$pid"
+        return 0
+    fi
+
+    return 1
+}
+
+stop_rotation() {
+    if pid=$(running_pid); then
+        kill "$pid" 2>/dev/null || true
+    fi
+
+    rm -f "$pid_file"
+}
+
+rotate_wallpapers() {
+    mkdir -p "$runtime_dir"
+    stop_rotation
+    printf '%s\n' "$$" > "$pid_file"
+    sleep_pid=
+
+    cleanup() {
+        if [ -n "$sleep_pid" ]; then
+            kill "$sleep_pid" 2>/dev/null || true
+        fi
+
+        current_pid=
+        if [ -f "$pid_file" ]; then
+            read current_pid < "$pid_file" || current_pid=
+        fi
+
+        if [ "$current_pid" = "$$" ]; then
+            rm -f "$pid_file"
+        fi
+    }
+
+    trap 'cleanup; exit 0' INT TERM
+    trap cleanup EXIT
+
+    while :; do
+        set_wallpaper || true
+        sleep "$interval" &
+        sleep_pid=$!
+        wait "$sleep_pid" || true
+        sleep_pid=
+    done
+}
+
+case "$command_name" in
+    once)
+        set_wallpaper
+        ;;
+    rotate)
+        rotate_wallpapers
+        ;;
+    stop)
+        stop_rotation
+        ;;
+    *)
+        printf 'Usage: %s [once|rotate|stop]\n' "$0" >&2
+        exit 2
+        ;;
+esac

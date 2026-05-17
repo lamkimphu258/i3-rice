@@ -1,0 +1,64 @@
+#!/bin/sh
+
+runtime_dir=${XDG_RUNTIME_DIR:-/tmp}
+[ -d "$runtime_dir" ] || runtime_dir=/tmp
+pid_file=$runtime_dir/i3blocks-calendar.pid
+
+calendar_pid() {
+    [ -r "$pid_file" ] || return 1
+
+    pid=$(cat "$pid_file" 2>/dev/null || printf '')
+    case "$pid" in
+        ''|*[!0-9]*)
+            return 1
+            ;;
+    esac
+
+    command_name=$(ps -p "$pid" -o comm= 2>/dev/null | awk 'NR == 1 { print $1 }')
+    case "$command_name" in
+        gsimplecal|yad)
+            printf '%s\n' "$pid"
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+notify_calendar() {
+    calendar=$(cal 2>/dev/null || date '+%A, %d %B %Y')
+
+    if command -v dunstify >/dev/null 2>&1; then
+        dunstify -a i3blocks -u low -r 9105 "Calendar" "$calendar" >/dev/null 2>&1 || true
+    elif command -v notify-send >/dev/null 2>&1; then
+        notify-send -a i3blocks -u low "Calendar" "$calendar" >/dev/null 2>&1 || true
+    fi
+}
+
+toggle_calendar() {
+    if pid=$(calendar_pid); then
+        kill "$pid" 2>/dev/null || true
+        rm -f "$pid_file"
+        return 0
+    fi
+
+    rm -f "$pid_file"
+
+    if command -v gsimplecal >/dev/null 2>&1; then
+        gsimplecal >/dev/null 2>&1 &
+        printf '%s\n' "$!" > "$pid_file"
+    elif command -v yad >/dev/null 2>&1; then
+        yad --calendar --title=Calendar --undecorated --fixed --close-on-unfocus --skip-taskbar --no-buttons --width=260 --height=220 --mouse >/dev/null 2>&1 &
+        printf '%s\n' "$!" > "$pid_file"
+    else
+        notify_calendar
+    fi
+}
+
+case "${BLOCK_BUTTON:-}" in
+    1|3)
+        toggle_calendar
+        ;;
+esac
+
+date '+%a %d %b %H:%M'

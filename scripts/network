@@ -1,0 +1,54 @@
+#!/bin/sh
+
+open_network() {
+    if command -v nm-connection-editor >/dev/null 2>&1; then
+        nm-connection-editor >/dev/null 2>&1 &
+    elif command -v nmtui >/dev/null 2>&1 && command -v i3-sensible-terminal >/dev/null 2>&1; then
+        i3-sensible-terminal -e nmtui >/dev/null 2>&1 &
+    elif command -v nmtui >/dev/null 2>&1; then
+        nmtui >/dev/null 2>&1 &
+    fi
+}
+
+case "${BLOCK_BUTTON:-}" in
+    1|3)
+        open_network
+        ;;
+esac
+
+if command -v nmcli >/dev/null 2>&1; then
+    connection=$(nmcli -t -f TYPE,STATE,CONNECTION dev status 2>/dev/null | awk -F: '
+        $2 == "connected" && $3 != "" {
+            print $3;
+            exit;
+        }
+    ')
+
+    if [ -n "$connection" ]; then
+        printf '%s\n' "$connection"
+        printf '%s\n' "$connection"
+        exit 0
+    fi
+fi
+
+if command -v ip >/dev/null 2>&1; then
+    device=$(ip route get 1.1.1.1 2>/dev/null | awk '
+        {
+            for (i = 1; i <= NF; i++) {
+                if ($i == "dev") {
+                    print $(i + 1);
+                    exit;
+                }
+            }
+        }
+    ')
+
+    if [ -n "$device" ]; then
+        printf '%s\n' "$device"
+        printf '%s\n' "$device"
+        exit 0
+    fi
+fi
+
+printf 'down\n'
+printf 'down\n'

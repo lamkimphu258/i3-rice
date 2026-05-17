@@ -1,0 +1,49 @@
+# i3blocks status bar.
+
+command=${XDG_CONFIG_HOME:-$HOME/.config}/i3/scripts/$BLOCK_NAME
+separator_block_width=14
+markup=none
+
+[volume]
+label= 
+color=#b48ead
+interval=5
+signal=10
+min_width= 100%
+
+[brightness]
+label= 
+color=#ebcb8b
+interval=once
+signal=11
+min_width= 100%
+
+[network]
+label= 
+color=#88c0d0
+interval=5
+min_width= disconnected
+
+[battery]
+label= 
+color=#a3be8c
+interval=30
+min_width= 100% full
+
+[memory]
+label= 
+color=#d08770
+interval=10
+min_width= 00.0G 100%
+
+[cpu_load]
+label= 
+color=#81a1c1
+interval=5
+min_width= 00.00
+
+[datetime]
+interval=5
+label= 
+color=#eceff4
+min_width= Sat 16 May 23:59

@@ -1,0 +1,15 @@
+#!/bin/sh
+
+awk '
+    /MemTotal:/ { total=$2 }
+    /MemAvailable:/ { available=$2 }
+    END {
+        if (total == 0) {
+            print "n/a";
+            exit;
+        }
+        used=total-available;
+        pct=(used/total)*100;
+        printf "%.1fG %.0f%%\n", used/1024/1024, pct;
+    }
+' /proc/meminfo 2>/dev/null || printf 'n/a\n'

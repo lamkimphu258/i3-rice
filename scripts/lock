@@ -1,0 +1,8 @@
+#!/bin/sh
+
+if command -v i3lock >/dev/null 2>&1; then
+    exec i3lock -n -c 1f232d
+fi
+
+printf 'i3lock is not installed\n' >&2
+exit 1

@@ -1,0 +1,116 @@
+configuration {
+    modes: "combi,window,drun,run,filebrowser,recursivebrowser,ssh";
+    modi: "combi,window,drun,run,filebrowser,recursivebrowser,ssh";
+    combi-modes: "window,drun,run,ssh,filebrowser,recursivebrowser";
+    combi-modi: "window,drun,run,ssh,filebrowser,recursivebrowser";
+    sidebar-mode: true;
+    show-icons: true;
+    terminal: "i3-sensible-terminal";
+    font: "Inter 11";
+    matching: "fuzzy";
+    display-combi: "All";
+    display-drun: "Apps";
+    display-run: "Run";
+    display-window: "Windows";
+    display-ssh: "SSH";
+    display-filebrowser: "Files";
+    display-recursivebrowser: "Find";
+
+    filebrowser {
+        directories-first: true;
+        sorting-method: "name";
+        command: "xdg-open";
+    }
+
+    recursivebrowser {
+        command: "xdg-open";
+    }
+}
+
+* {
+    bg: #1f232d;
+    panel: #2e3440;
+    text: #d8dee9;
+    muted: #a7adba;
+    accent: #88c0d0;
+    urgent: #bf616a;
+}
+
+window {
+    width: 42%;
+    border: 2px;
+    border-color: @accent;
+    background-color: @bg;
+}
+
+mainbox {
+    padding: 16px;
+    spacing: 8px;
+    background-color: @bg;
+}
+
+inputbar {
+    padding: 10px;
+    spacing: 8px;
+    background-color: @panel;
+    text-color: @text;
+}
+
+prompt {
+    text-color: @accent;
+}
+
+entry {
+    placeholder: "Search";
+    placeholder-color: @muted;
+    text-color: @text;
+}
+
+listview {
+    lines: 12;
+    columns: 1;
+    fixed-height: false;
+    background-color: @bg;
+}
+
+mode-switcher {
+    spacing: 6px;
+    background-color: @bg;
+}
+
+button {
+    padding: 7px 10px;
+    background-color: transparent;
+    text-color: #ffffff;
+}
+
+button selected {
+    background-color: @panel;
+    text-color: #ffffff;
+}
+
+element {
+    padding: 9px;
+    spacing: 10px;
+    background-color: transparent;
+    text-color: @text;
+}
+
+element selected {
+    background-color: @accent;
+    text-color: @bg;
+}
+
+element-icon {
+    size: 1.1em;
+}
+
+element-text {
+    text-color: inherit;
+}
+
+message {
+    padding: 8px;
+    background-color: @panel;
+    text-color: @text;
+}
