@@ -95,6 +95,7 @@ After installing, reload i3 with `Super+Shift+r`.
 - `Super+d`: rofi combined launcher for apps, commands, windows, SSH hosts, and files
 - `Super+Shift+q`: close focused window
 - `Super+Shift+x`: lock screen
+- `Super+Shift+s`: lock screen and suspend
 - i3blocks volume: scroll adjusts volume, left click toggles mute, right click opens the mixer
 - i3blocks brightness: scroll or left/right click adjusts brightness
 - i3blocks network: click opens the NetworkManager connection editor
