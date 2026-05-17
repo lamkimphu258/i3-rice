@@ -5,6 +5,7 @@ configuration {
     combi-modi: "window,drun,run,ssh,filebrowser,recursivebrowser";
     sidebar-mode: true;
     show-icons: true;
+    icon-theme: "Papirus-Dark";
     terminal: "i3-sensible-terminal";
     font: "Inter 11";
     matching: "fuzzy";
@@ -28,12 +29,28 @@ configuration {
 }
 
 * {
-    bg: #1f232d;
-    panel: #2e3440;
-    text: #d8dee9;
-    muted: #a7adba;
-    accent: #88c0d0;
+    bg: #10243a;
+    panel: #0a1726;
+    text: #ffffff;
+    muted: #8ea9c8;
+    accent: #ffffff;
     urgent: #bf616a;
+    foreground: @text;
+    background: @bg;
+    normal-background: transparent;
+    normal-foreground: @text;
+    alternate-normal-background: transparent;
+    alternate-normal-foreground: @text;
+    selected-normal-background: @panel;
+    selected-normal-foreground: @text;
+    active-background: transparent;
+    active-foreground: @text;
+    selected-active-background: @panel;
+    selected-active-foreground: @text;
+    urgent-background: transparent;
+    urgent-foreground: @text;
+    selected-urgent-background: @urgent;
+    selected-urgent-foreground: @text;
 }
 
 window {
@@ -96,9 +113,30 @@ element {
     text-color: @text;
 }
 
+element normal.normal,
+element alternate.normal,
+element normal.active,
+element alternate.active,
+element normal.urgent,
+element alternate.urgent {
+    background-color: transparent;
+    text-color: @text;
+}
+
 element selected {
-    background-color: @accent;
-    text-color: @bg;
+    background-color: @panel;
+    text-color: @text;
+}
+
+element selected.normal,
+element selected.active {
+    background-color: @panel;
+    text-color: @text;
+}
+
+element selected.urgent {
+    background-color: @urgent;
+    text-color: @text;
 }
 
 element-icon {
