@@ -1,11 +1,10 @@
 # Cross-Distro Regolith-Inspired i3 Rice
 
-Portable native i3 configuration with a Regolith-style workflow. It installs common desktop dependencies, backs up existing configs, and copies this repo's configs into your user config directory.
+Portable native i3 configuration with a Regolith-style workflow. It installs common desktop dependencies, sets up AstroNvim, backs up existing configs, and copies this repo's configs into your user config directory.
 
 Supported package managers:
 
 - `apt`
-- `dnf`
 - `pacman`
 
 This does not install Regolith packages.
@@ -24,6 +23,15 @@ Install dependencies and copy configs:
 ./install.sh
 ```
 
+This also installs NVM, installs the latest Node.js LTS release with `nvm install --lts`, and installs AstroNvim from the official template into `~/.config/nvim`.
+
+On Ubuntu's default GDM login screen, choose the session after logging out:
+
+1. Click your user.
+2. Click the gear icon in the lower-right corner.
+3. Select `i3 Rice`.
+4. Enter your password and log in.
+
 Copy configs only:
 
 ```sh
@@ -38,6 +46,7 @@ Overwrite without prompts while still creating backups:
 
 The installer copies configs into `${XDG_CONFIG_HOME:-$HOME/.config}`:
 
+- AstroNvim template -> `~/.config/nvim`
 - `config/i3` -> `~/.config/i3`
 - `config/i3blocks` -> `~/.config/i3blocks`
 - `config/rofi` -> `~/.config/rofi`
@@ -45,6 +54,10 @@ The installer copies configs into `${XDG_CONFIG_HOME:-$HOME/.config}`:
 - `config/picom` -> `~/.config/picom`
 - `scripts` -> `~/.config/i3/scripts`
 - `wallpapers` -> `~/.config/wallpapers`
+
+It also installs this display-manager session entry:
+
+- `/usr/share/xsessions/i3-rice.desktop`
 
 Existing targets are moved to:
 
@@ -54,9 +67,21 @@ Existing targets are moved to:
 
 ## Package Notes
 
-The installer uses distro-native package names for i3, i3blocks, rofi, dunst, picom, feh, xss-lock, i3lock, playerctl, brightnessctl, pavucontrol, upower, NetworkManager applet, a calendar popup helper, common fonts, Font Awesome, Arc GTK theme, and Papirus icons.
+The installer uses distro-native package names for i3, i3blocks, rofi, Kitty, dunst, picom, feh, xss-lock, i3lock, playerctl, brightnessctl, pavucontrol, upower, NetworkManager applet, a calendar popup helper, common fonts, Font Awesome, Arc GTK theme, Papirus icons, Git, curl, bash, Neovim, ripgrep, nginx, PHP-FPM, PHP XML, PHP SQLite, PHP MySQL extensions, VLC, Flameshot, SimpleScreenRecorder, and OBS Studio.
 
-Some theme or font package names vary by distro or repository setup. If dependency installation fails, install the missing package manually or rerun with `--no-install` to copy only configs.
+Before installing packages, the installer updates package metadata and upgrades existing packages with `apt-get update && apt-get upgrade -y` or `pacman -Syu --noconfirm`. At the end, it runs `apt-get autoremove -y` on apt systems or removes orphaned packages on pacman systems.
+
+Docker Engine, Docker Buildx, and Docker Compose are installed as the latest stable packages from Docker's official apt repository where available. On Arch-based systems, Docker and Compose are installed from Arch's rolling packages. The installer also runs Docker's Linux post-install steps: it creates the `docker` group if needed, adds the installing user to it, and enables/starts `docker.service` when systemd is available. Log out and back in before running Docker without `sudo`.
+
+It also installs `JetBrainsMono Nerd Font` into `~/.local/share/fonts/JetBrainsMonoNerdFont` so i3, i3bar, rofi, and terminal apps can render icon glyphs consistently.
+
+Native compiler tools are installed as well: `build-essential` on apt systems and `base-devel` on pacman systems. These are needed by Neovim/AstroNvim Tree-sitter parser builds. AstroNvim currently requires Neovim 0.11 or newer; if your distro package is older, install a newer Neovim build before launching it.
+
+NVM is installed from the versioned upstream installer, sourced inside the installer shell, and then used to install the latest Node.js LTS release. After Node is available, npm installs the latest global `@openai/codex`, `@anthropic-ai/claude-code`, `opencode-ai`, and `bun` packages. NVM also updates your shell profile so new terminals can load `nvm`.
+
+Composer is installed from the upstream installer, verified against the official installer checksum, and written to `/usr/local/bin/composer`.
+
+Some theme, font, PHP, or Docker package names vary by distro or repository setup. If dependency installation fails, install the missing package manually or rerun with `--no-install` to copy only configs. `--no-install` skips package installation, Docker setup, Nerd Font setup, NVM/Node setup, global npm tools, Composer, AstroNvim setup, compiler tools, and the display-manager session entry.
 
 ## Wallpaper Rotation
 
@@ -85,14 +110,16 @@ Use the matching backup path printed by the installer.
 ./install.sh --dry-run
 i3 -C -c config/i3/config
 sh -n scripts/*
+nvim --headless "+TSUpdateSync" +qa
 ```
 
 After installing, reload i3 with `Super+Shift+r`.
 
 ## Key Bindings
 
-- `Super+Enter`: terminal
-- `Super+d`: rofi combined launcher for apps, commands, windows, SSH hosts, and files
+- `Super+Enter`: Kitty terminal
+- `Super+Space`: rofi combined launcher for apps, commands, windows, SSH hosts, and files
+- `Super+Tab`: toggle focus between tiling and floating windows
 - `Super+Shift+q`: close focused window
 - `Super+Shift+x`: lock screen
 - `Super+Shift+s`: lock screen and suspend

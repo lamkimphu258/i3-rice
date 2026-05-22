@@ -1,10 +1,10 @@
 # Regolith-inspired native i3 config.
 
 set $mod Mod4
-set $term i3-sensible-terminal
+set $term kitty
 set $launcher rofi -config ~/.config/rofi/config.rasi -show combi -show-icons
 
-font pango:Inter, Noto Sans, FontAwesome 10
+font pango:JetBrainsMono Nerd Font, Inter, Noto Sans, FontAwesome 10
 floating_modifier $mod
 focus_follows_mouse no
 mouse_warping none
@@ -23,7 +23,7 @@ client.urgent           #bf616a #bf616a #eceff4 #bf616a #bf616a
 client.placeholder      #000000 #1f232d #eceff4 #000000 #000000
 
 bindsym $mod+Return exec --no-startup-id $term
-bindsym $mod+d exec --no-startup-id $launcher
+bindsym $mod+space exec --no-startup-id $launcher
 bindsym $mod+Shift+q kill
 bindsym $mod+Shift+c reload
 bindsym $mod+Shift+r restart
@@ -56,7 +56,7 @@ bindsym $mod+s layout stacking
 bindsym $mod+w layout tabbed
 bindsym $mod+e layout toggle split
 bindsym $mod+Shift+space floating toggle
-bindsym $mod+space focus mode_toggle
+bindsym $mod+Tab focus mode_toggle
 bindsym $mod+a focus parent
 
 mode "resize" {
@@ -121,6 +121,7 @@ for_window [class="Rofi"] border pixel 0
 for_window [window_role="pop-up"] floating enable
 for_window [window_role="task_dialog"] floating enable
 
+exec_always --no-startup-id setxkbmap us -variant colemak
 exec --no-startup-id nm-applet
 exec --no-startup-id dunst
 exec --no-startup-id sh -c 'picom --config "${XDG_CONFIG_HOME:-$HOME/.config}/picom/picom.conf"'
@@ -131,7 +132,7 @@ bar {
     position top
     status_command i3blocks
     tray_output primary
-    font pango:Inter, Noto Sans, FontAwesome 10
+    font pango:JetBrainsMono Nerd Font, Inter, Noto Sans, FontAwesome 10
     colors {
         background #1f232d
         statusline #d8dee9

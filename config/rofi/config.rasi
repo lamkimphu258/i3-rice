@@ -6,8 +6,8 @@ configuration {
     sidebar-mode: true;
     show-icons: true;
     icon-theme: "Papirus-Dark";
-    terminal: "i3-sensible-terminal";
-    font: "Inter 11";
+    terminal: "kitty";
+    font: "JetBrainsMono Nerd Font 11";
     matching: "fuzzy";
     display-combi: "All";
     display-drun: "Apps";

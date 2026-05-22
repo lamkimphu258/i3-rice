@@ -2,11 +2,11 @@
 
 ## Summary
 
-Create a portable i3 rice repo that installs dependencies, backs up existing configs, and copies Regolith-inspired configs into the current machine. It will support only `apt`, `dnf`, and `pacman`, and will not require actual Regolith packages.
+Create a portable i3 rice repo that installs dependencies, backs up existing configs, and copies Regolith-inspired configs into the current machine. It will support only `apt` and `pacman`, and will not require actual Regolith packages.
 
 ## Key Changes
 
-- Add `install.sh` with package-manager detection for `apt`, `dnf`, and `pacman`.
+- Add `install.sh` with package-manager detection for `apt` and `pacman`.
 - Install core dependencies: `i3`, `i3blocks`, `rofi`, `dunst`, `picom`, `feh`, `xss-lock`, `i3lock`, `playerctl`, `brightnessctl`, `network-manager-applet`, common fonts, GTK theme, and icon theme where available.
 - Add portable config directories: `config/i3/`, `config/i3blocks/`, `config/rofi/`, `config/dunst/`, `config/picom/`, `scripts/`, and `wallpapers/`.
 - Copy configs into `$XDG_CONFIG_HOME` or `~/.config`.
@@ -30,11 +30,11 @@ Create a portable i3 rice repo that installs dependencies, backs up existing con
 - Validate i3 config with `i3 -C -c config/i3/config`.
 - Validate scripts with `sh -n scripts/*`.
 - After install, verify launcher opens with rofi, i3bar loads i3blocks, notifications use dunst, picom starts, wallpaper is restored, lock command works, and volume/media/brightness keys work.
-- Smoke-test installer on Ubuntu/Debian, Fedora, and Arch-based systems.
+- Smoke-test installer on Ubuntu/Debian and Arch-based systems.
 
 ## Assumptions
 
-- Supported distros are limited to systems using `apt`, `dnf`, or `pacman`.
+- Supported distros are limited to systems using `apt` or `pacman`.
 - Existing user configs must be backed up before replacement.
 - The goal is Regolith-inspired native i3, not installing Regolith itself.
 - `i3blocks` is the status bar backend.
