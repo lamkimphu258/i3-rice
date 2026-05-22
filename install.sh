@@ -18,6 +18,9 @@ BACKUP_CREATED=0
 APT_PACKAGES="xorg i3-wm i3blocks rofi kitty dunst picom feh xss-lock i3lock playerctl brightnessctl pavucontrol upower network-manager-gnome gsimplecal fonts-dejavu fonts-font-awesome fonts-noto-color-emoji arc-theme papirus-icon-theme build-essential ca-certificates curl unzip fontconfig git neovim ripgrep bash nginx php-cli php-fpm php-xml php-sqlite3 php-mysql vlc flameshot simplescreenrecorder obs-studio"
 PACMAN_PACKAGES="xorg-server xorg-xinit i3-wm i3blocks rofi kitty dunst picom feh xss-lock i3lock playerctl brightnessctl pavucontrol upower network-manager-applet gsimplecal ttf-dejavu ttf-font-awesome noto-fonts-emoji arc-gtk-theme papirus-icon-theme base-devel ca-certificates curl unzip fontconfig git neovim ripgrep bash nginx php php-fpm php-sqlite docker docker-compose vlc flameshot simplescreenrecorder obs-studio"
 DOCKER_APT_PACKAGES="docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin"
+CHROME_DEB_URL="https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"
+MYSQL_APT_KEY_URL="https://repo.mysql.com/RPM-GPG-KEY-mysql-2025"
+MYSQL_WORKBENCH_APT_PACKAGE="mysql-workbench-community"
 NERD_FONT_NAME="JetBrainsMono Nerd Font"
 NERD_FONT_VERSION="v3.4.0"
 NERD_FONT_URL="https://github.com/ryanoasis/nerd-fonts/releases/download/$NERD_FONT_VERSION/JetBrainsMono.zip"
@@ -206,6 +209,19 @@ docker_apt_codename() {
     fi
 }
 
+mysql_workbench_apt_codename() {
+    repo_suite=$(docker_apt_codename)
+
+    case "$repo_suite" in
+        noble|jammy)
+            printf '%s' "$repo_suite"
+            ;;
+        *)
+            printf 'noble'
+            ;;
+    esac
+}
+
 install_docker_latest() {
     manager=$(detect_package_manager) || die "unsupported distro: expected apt or pacman"
     sudo_cmd=$(need_sudo)
@@ -242,6 +258,95 @@ install_docker_latest() {
             fi
             ;;
     esac
+}
+
+install_google_chrome() {
+    manager=$(detect_package_manager) || die "unsupported distro: expected apt or pacman"
+    sudo_cmd=$(need_sudo)
+
+    case "$manager" in
+        apt)
+            if [ "$DRY_RUN" -eq 1 ]; then
+                say "Would download Google Chrome: $CHROME_DEB_URL"
+                say "Would run: $sudo_cmd apt-get install -y ./google-chrome-stable_current_amd64.deb"
+            else
+                chrome_deb=$(mktemp --suffix=.deb)
+                curl -fL "$CHROME_DEB_URL" -o "$chrome_deb"
+                $sudo_cmd apt-get install -y "$chrome_deb"
+                rm -f "$chrome_deb"
+            fi
+            ;;
+        pacman)
+            if [ "$DRY_RUN" -eq 1 ]; then
+                say "Would build and install Google Chrome from AUR: https://aur.archlinux.org/google-chrome.git"
+            else
+                install_aur_package google-chrome
+            fi
+            ;;
+    esac
+}
+
+install_mysql_workbench() {
+    manager=$(detect_package_manager) || die "unsupported distro: expected apt or pacman"
+    sudo_cmd=$(need_sudo)
+
+    case "$manager" in
+        apt)
+            repo_id=$(docker_apt_repo_id)
+            repo_suite=$(mysql_workbench_apt_codename)
+
+            if [ "$repo_id" != ubuntu ]; then
+                die "MySQL Workbench from MySQL APT repository is only provided for Ubuntu apt systems"
+            fi
+
+            if [ "$DRY_RUN" -eq 1 ]; then
+                say "Would install MySQL APT key: $MYSQL_APT_KEY_URL"
+                say "Would install MySQL Workbench apt repo: http://repo.mysql.com/apt/ubuntu/ $repo_suite mysql-tools"
+                say "Would run: $sudo_cmd apt-get update"
+                say "Would run: $sudo_cmd apt-get install -y $MYSQL_WORKBENCH_APT_PACKAGE"
+            else
+                $sudo_cmd install -m 0755 -d /etc/apt/keyrings
+                $sudo_cmd curl -fsSL "$MYSQL_APT_KEY_URL" -o /etc/apt/keyrings/mysql.asc
+                $sudo_cmd chmod a+r /etc/apt/keyrings/mysql.asc
+                printf 'deb [arch=amd64 signed-by=/etc/apt/keyrings/mysql.asc] http://repo.mysql.com/apt/ubuntu/ %s mysql-tools\n' "$repo_suite" \
+                    | $sudo_cmd tee /etc/apt/sources.list.d/mysql-workbench.list >/dev/null
+                $sudo_cmd apt-get update
+                $sudo_cmd apt-get install -y "$MYSQL_WORKBENCH_APT_PACKAGE"
+            fi
+            ;;
+        pacman)
+            if [ "$DRY_RUN" -eq 1 ]; then
+                say "Would run: $sudo_cmd pacman -S --needed --noconfirm mysql-workbench"
+            else
+                $sudo_cmd pacman -S --needed --noconfirm mysql-workbench
+            fi
+            ;;
+    esac
+}
+
+install_aur_package() {
+    package=$1
+    aur_user=${SUDO_USER:-${USER:-}}
+
+    [ -n "$aur_user" ] || die "could not determine non-root user for AUR install"
+    [ "$aur_user" != root ] || die "AUR package builds must run as a non-root user"
+
+    aur_dir=$(mktemp -d)
+    git clone "https://aur.archlinux.org/$package.git" "$aur_dir/$package"
+
+    if [ "$(id -u)" -eq 0 ]; then
+        chown -R "$aur_user:$aur_user" "$aur_dir"
+        su "$aur_user" -c "cd '$aur_dir/$package' && makepkg -si --noconfirm --needed"
+    else
+        (cd "$aur_dir/$package" && makepkg -si --noconfirm --needed)
+    fi
+
+    rm -rf "$aur_dir"
+}
+
+install_external_desktop_apps() {
+    install_google_chrome
+    install_mysql_workbench
 }
 
 run_docker_post_install() {
@@ -598,6 +703,7 @@ else
     run_php_post_install
     install_docker_latest
     run_docker_post_install
+    install_external_desktop_apps
     install_nerd_font
     install_nvm_node_lts
     install_global_npm_tools

@@ -71,6 +71,10 @@ The installer uses distro-native package names for i3, i3blocks, rofi, Kitty, du
 
 Before installing packages, the installer updates package metadata and upgrades existing packages with `apt-get update && apt-get upgrade -y` or `pacman -Syu --noconfirm`. At the end, it runs `apt-get autoremove -y` on apt systems or removes orphaned packages on pacman systems.
 
+Google Chrome is downloaded from Google's current stable Linux `.deb` on apt systems. On Arch-based systems, Google Chrome is built and installed from the `google-chrome` AUR package, so the installer must run with a non-root user available for `makepkg`.
+
+MySQL Workbench is installed from MySQL's official APT `mysql-tools` repository on Ubuntu apt systems as `mysql-workbench-community`. On Arch-based systems, it is installed from the official `extra` repository as `mysql-workbench`.
+
 Docker Engine, Docker Buildx, and Docker Compose are installed as the latest stable packages from Docker's official apt repository where available. On Arch-based systems, Docker and Compose are installed from Arch's rolling packages. The installer also runs Docker's Linux post-install steps: it creates the `docker` group if needed, adds the installing user to it, and enables/starts `docker.service` when systemd is available. Log out and back in before running Docker without `sudo`.
 
 It also installs `JetBrainsMono Nerd Font` into `~/.local/share/fonts/JetBrainsMonoNerdFont` so i3, i3bar, rofi, and terminal apps can render icon glyphs consistently.
@@ -81,7 +85,7 @@ NVM is installed from the versioned upstream installer, sourced inside the insta
 
 Composer is installed from the upstream installer, verified against the official installer checksum, and written to `/usr/local/bin/composer`.
 
-Some theme, font, PHP, or Docker package names vary by distro or repository setup. If dependency installation fails, install the missing package manually or rerun with `--no-install` to copy only configs. `--no-install` skips package installation, Docker setup, Nerd Font setup, NVM/Node setup, global npm tools, Composer, AstroNvim setup, compiler tools, and the display-manager session entry.
+Some theme, font, PHP, Docker, Chrome, or MySQL Workbench package names vary by distro or repository setup. If dependency installation fails, install the missing package manually or rerun with `--no-install` to copy only configs. `--no-install` skips package installation, Chrome and MySQL Workbench setup, Docker setup, Nerd Font setup, NVM/Node setup, global npm tools, Composer, AstroNvim setup, compiler tools, and the display-manager session entry.
 
 ## Wallpaper Rotation
 
