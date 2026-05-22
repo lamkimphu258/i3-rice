@@ -2,7 +2,7 @@
 
 set $mod Mod4
 set $term kitty
-set $launcher rofi -config ~/.config/rofi/config.rasi -show combi -show-icons
+set $launcher rofi -config ~/.config/rofi/config.rasi -show drun -show-icons
 
 font pango:JetBrainsMono Nerd Font, Inter, Noto Sans, FontAwesome 10
 floating_modifier $mod

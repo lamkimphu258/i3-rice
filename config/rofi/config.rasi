@@ -1,18 +1,13 @@
 configuration {
-    modes: "combi,window,drun,run,filebrowser,recursivebrowser,ssh";
-    modi: "combi,window,drun,run,filebrowser,recursivebrowser,ssh";
-    combi-modes: "window,drun,run,ssh,filebrowser,recursivebrowser";
-    combi-modi: "window,drun,run,ssh,filebrowser,recursivebrowser";
+    modes: "drun,filebrowser,recursivebrowser,ssh";
+    modi: "drun,filebrowser,recursivebrowser,ssh";
     sidebar-mode: true;
     show-icons: true;
     icon-theme: "Papirus-Dark";
     terminal: "kitty";
     font: "JetBrainsMono Nerd Font 11";
     matching: "fuzzy";
-    display-combi: "All";
     display-drun: "Apps";
-    display-run: "Run";
-    display-window: "Windows";
     display-ssh: "SSH";
     display-filebrowser: "Files";
     display-recursivebrowser: "Find";

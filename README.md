@@ -49,11 +49,13 @@ The installer copies configs into `${XDG_CONFIG_HOME:-$HOME/.config}`:
 - AstroNvim template -> `~/.config/nvim`
 - `config/i3` -> `~/.config/i3`
 - `config/i3blocks` -> `~/.config/i3blocks`
+- `config/kitty` -> `~/.config/kitty`
 - `config/rofi` -> `~/.config/rofi`
 - `config/dunst` -> `~/.config/dunst`
 - `config/picom` -> `~/.config/picom`
 - `scripts` -> `~/.config/i3/scripts`
 - `wallpapers` -> `~/.config/wallpapers`
+- `applications/google-chrome.desktop` -> `~/.local/share/applications/google-chrome.desktop`
 
 It also installs this display-manager session entry:
 

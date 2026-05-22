@@ -585,7 +585,7 @@ install_login_session() {
 [Desktop Entry]
 Name=i3 Rice
 Comment=Log in using i3 with this rice configuration
-Exec=i3
+Exec=env XDG_SESSION_TYPE=x11 WAYLAND_DISPLAY= i3
 TryExec=i3
 Type=XSession
 X-LightDM-DesktopName=i3 Rice
@@ -673,11 +673,13 @@ copy_configs() {
 
     copy_path "$ROOT_DIR/config/i3" "$CONFIG_HOME/i3" "i3"
     copy_path "$ROOT_DIR/config/i3blocks" "$CONFIG_HOME/i3blocks" "i3blocks"
+    copy_path "$ROOT_DIR/config/kitty" "$CONFIG_HOME/kitty" "kitty"
     copy_path "$ROOT_DIR/config/rofi" "$CONFIG_HOME/rofi" "rofi"
     copy_path "$ROOT_DIR/config/dunst" "$CONFIG_HOME/dunst" "dunst"
     copy_path "$ROOT_DIR/config/picom" "$CONFIG_HOME/picom" "picom"
     copy_path "$ROOT_DIR/scripts" "$CONFIG_HOME/i3/scripts" "i3/scripts"
     copy_path "$ROOT_DIR/wallpapers" "$CONFIG_HOME/wallpapers" "wallpapers"
+    copy_path "$ROOT_DIR/applications/google-chrome.desktop" "$HOME/.local/share/applications/google-chrome.desktop" "applications/google-chrome.desktop"
 
     if [ "$DRY_RUN" -eq 0 ] && [ "$BACKUP_CREATED" -eq 1 ]; then
         say "Backups saved under: $BACKUP_DIR"
