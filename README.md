@@ -72,7 +72,7 @@ Existing targets are moved to:
 
 ## Package Notes
 
-The installer uses distro-native package names for i3, i3blocks, rofi, Kitty, dunst, picom, feh, xss-lock, i3lock, playerctl, brightnessctl, pavucontrol, upower, NetworkManager applet, a calendar popup helper, common fonts, Font Awesome, Arc GTK theme, Papirus icons, Git, curl, bash, zsh, Neovim, ripgrep, nginx, PHP-FPM, PHP XML, PHP SQLite, PHP MySQL extensions, VLC, Flameshot, SimpleScreenRecorder, and OBS Studio.
+The installer uses distro-native package names for i3, i3blocks, rofi, Kitty, dunst, picom, feh, xss-lock, i3lock, playerctl, brightnessctl, pavucontrol, upower, NetworkManager applet, a calendar popup helper, common fonts, Font Awesome, Arc GTK theme, Papirus icons, Git, curl, bash, zsh, Neovim, ripgrep, nginx, PHP-FPM, PHP XML, PHP SQLite, PHP MySQL, PHP mbstring, PHP cURL extensions, VLC, Flameshot, SimpleScreenRecorder, and OBS Studio.
 
 Before installing packages, the installer updates package metadata and upgrades existing packages with `apt-get update && apt-get upgrade -y` or `pacman -Syu --noconfirm`. At the end, it runs `apt-get autoremove -y` on apt systems or removes orphaned packages on pacman systems.
 

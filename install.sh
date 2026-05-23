@@ -15,7 +15,7 @@ TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 BACKUP_DIR=$BACKUP_ROOT/i3-rice-$TIMESTAMP
 BACKUP_CREATED=0
 
-APT_PACKAGES="xorg i3-wm i3blocks rofi kitty dunst picom feh xss-lock i3lock playerctl brightnessctl pavucontrol upower network-manager-gnome gsimplecal fonts-dejavu fonts-font-awesome fonts-noto-color-emoji arc-theme papirus-icon-theme build-essential ca-certificates curl unzip fontconfig git neovim ripgrep bash zsh nginx php-cli php-fpm php-xml php-sqlite3 php-mysql vlc flameshot simplescreenrecorder obs-studio"
+APT_PACKAGES="xorg i3-wm i3blocks rofi kitty dunst picom feh xss-lock i3lock playerctl brightnessctl pavucontrol upower network-manager-gnome gsimplecal fonts-dejavu fonts-font-awesome fonts-noto-color-emoji arc-theme papirus-icon-theme build-essential ca-certificates curl unzip fontconfig git neovim ripgrep bash zsh nginx php-cli php-fpm php-xml php-sqlite3 php-mysql php-mbstring php-curl vlc flameshot simplescreenrecorder obs-studio"
 PACMAN_PACKAGES="xorg-server xorg-xinit i3-wm i3blocks rofi kitty dunst picom feh xss-lock i3lock playerctl brightnessctl pavucontrol upower network-manager-applet gsimplecal ttf-dejavu ttf-font-awesome noto-fonts-emoji arc-gtk-theme papirus-icon-theme base-devel ca-certificates curl unzip fontconfig git neovim ripgrep bash zsh nginx php php-fpm php-sqlite docker docker-compose vlc flameshot simplescreenrecorder obs-studio"
 DOCKER_APT_PACKAGES="docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin"
 NPM_GLOBAL_PACKAGES="@openai/codex @anthropic-ai/claude-code opencode-ai bun"
@@ -465,7 +465,7 @@ run_php_post_install() {
     fi
 
     if [ "$DRY_RUN" -eq 1 ]; then
-        say "Would enable PHP mysqli, pdo_mysql, sqlite3, and pdo_sqlite modules in $php_ext_file"
+        say "Would enable PHP mysqli, pdo_mysql, sqlite3, pdo_sqlite, mbstring, and curl modules in $php_ext_file"
         return 0
     fi
 
@@ -474,8 +474,10 @@ run_php_post_install() {
         'extension=pdo_mysql' \
         'extension=sqlite3' \
         'extension=pdo_sqlite' \
+        'extension=mbstring' \
+        'extension=curl' \
         | $sudo_cmd tee "$php_ext_file" >/dev/null
-    say "Enabled PHP MySQL and SQLite extensions: $php_ext_file"
+    say "Enabled PHP MySQL, SQLite, mbstring, and curl extensions: $php_ext_file"
 }
 
 set_zsh_default_shell() {
