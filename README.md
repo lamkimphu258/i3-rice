@@ -53,6 +53,7 @@ The installer copies configs into `${XDG_CONFIG_HOME:-$HOME/.config}`:
 - `config/rofi` -> `~/.config/rofi`
 - `config/dunst` -> `~/.config/dunst`
 - `config/picom` -> `~/.config/picom`
+- `config/shell/x11-session-env.sh` -> `~/.config/i3-rice/x11-session-env.sh`
 - `scripts` -> `~/.config/i3/scripts`
 - `wallpapers` -> `~/.config/wallpapers`
 - `applications/google-chrome.desktop` -> `~/.local/share/applications/google-chrome.desktop`
@@ -60,6 +61,8 @@ The installer copies configs into `${XDG_CONFIG_HOME:-$HOME/.config}`:
 It also installs this display-manager session entry:
 
 - `/usr/share/xsessions/i3-rice.desktop`
+
+The installer also makes `~/.zshrc`, `~/.profile`, `~/.zprofile`, and `~/.xsessionrc` source the i3 Rice X11 environment file. This keeps `XDG_SESSION_TYPE=x11` and `QT_QPA_PLATFORM=xcb` for zsh, i3 sessions, and Qt apps such as Flameshot.
 
 Existing targets are moved to:
 
@@ -69,7 +72,7 @@ Existing targets are moved to:
 
 ## Package Notes
 
-The installer uses distro-native package names for i3, i3blocks, rofi, Kitty, dunst, picom, feh, xss-lock, i3lock, playerctl, brightnessctl, pavucontrol, upower, NetworkManager applet, a calendar popup helper, common fonts, Font Awesome, Arc GTK theme, Papirus icons, Git, curl, bash, Neovim, ripgrep, nginx, PHP-FPM, PHP XML, PHP SQLite, PHP MySQL extensions, VLC, Flameshot, SimpleScreenRecorder, and OBS Studio.
+The installer uses distro-native package names for i3, i3blocks, rofi, Kitty, dunst, picom, feh, xss-lock, i3lock, playerctl, brightnessctl, pavucontrol, upower, NetworkManager applet, a calendar popup helper, common fonts, Font Awesome, Arc GTK theme, Papirus icons, Git, curl, bash, zsh, Neovim, ripgrep, nginx, PHP-FPM, PHP XML, PHP SQLite, PHP MySQL extensions, VLC, Flameshot, SimpleScreenRecorder, and OBS Studio.
 
 Before installing packages, the installer updates package metadata and upgrades existing packages with `apt-get update && apt-get upgrade -y` or `pacman -Syu --noconfirm`. At the end, it runs `apt-get autoremove -y` on apt systems or removes orphaned packages on pacman systems.
 
@@ -84,6 +87,8 @@ It also installs `JetBrainsMono Nerd Font` into `~/.local/share/fonts/JetBrainsM
 Native compiler tools are installed as well: `build-essential` on apt systems and `base-devel` on pacman systems. These are needed by Neovim/AstroNvim Tree-sitter parser builds. AstroNvim currently requires Neovim 0.11 or newer; if your distro package is older, install a newer Neovim build before launching it.
 
 NVM is installed from the versioned upstream installer, sourced inside the installer shell, and then used to install the latest Node.js LTS release. After Node is available, npm installs the latest global `@openai/codex`, `@anthropic-ai/claude-code`, `opencode-ai`, and `bun` packages. NVM also updates your shell profile so new terminals can load `nvm`.
+
+Oh My Zsh is cloned from the upstream `ohmyzsh/ohmyzsh` repository into `~/.oh-my-zsh`, and `~/.zshrc` is updated to load it.
 
 Composer is installed from the upstream installer, verified against the official installer checksum, and written to `/usr/local/bin/composer`.
 

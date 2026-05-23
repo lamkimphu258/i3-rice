@@ -15,9 +15,10 @@ TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 BACKUP_DIR=$BACKUP_ROOT/i3-rice-$TIMESTAMP
 BACKUP_CREATED=0
 
-APT_PACKAGES="xorg i3-wm i3blocks rofi kitty dunst picom feh xss-lock i3lock playerctl brightnessctl pavucontrol upower network-manager-gnome gsimplecal fonts-dejavu fonts-font-awesome fonts-noto-color-emoji arc-theme papirus-icon-theme build-essential ca-certificates curl unzip fontconfig git neovim ripgrep bash nginx php-cli php-fpm php-xml php-sqlite3 php-mysql vlc flameshot simplescreenrecorder obs-studio"
-PACMAN_PACKAGES="xorg-server xorg-xinit i3-wm i3blocks rofi kitty dunst picom feh xss-lock i3lock playerctl brightnessctl pavucontrol upower network-manager-applet gsimplecal ttf-dejavu ttf-font-awesome noto-fonts-emoji arc-gtk-theme papirus-icon-theme base-devel ca-certificates curl unzip fontconfig git neovim ripgrep bash nginx php php-fpm php-sqlite docker docker-compose vlc flameshot simplescreenrecorder obs-studio"
+APT_PACKAGES="xorg i3-wm i3blocks rofi kitty dunst picom feh xss-lock i3lock playerctl brightnessctl pavucontrol upower network-manager-gnome gsimplecal fonts-dejavu fonts-font-awesome fonts-noto-color-emoji arc-theme papirus-icon-theme build-essential ca-certificates curl unzip fontconfig git neovim ripgrep bash zsh nginx php-cli php-fpm php-xml php-sqlite3 php-mysql vlc flameshot simplescreenrecorder obs-studio"
+PACMAN_PACKAGES="xorg-server xorg-xinit i3-wm i3blocks rofi kitty dunst picom feh xss-lock i3lock playerctl brightnessctl pavucontrol upower network-manager-applet gsimplecal ttf-dejavu ttf-font-awesome noto-fonts-emoji arc-gtk-theme papirus-icon-theme base-devel ca-certificates curl unzip fontconfig git neovim ripgrep bash zsh nginx php php-fpm php-sqlite docker docker-compose vlc flameshot simplescreenrecorder obs-studio"
 DOCKER_APT_PACKAGES="docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin"
+NPM_GLOBAL_PACKAGES="@openai/codex @anthropic-ai/claude-code opencode-ai bun"
 CHROME_DEB_URL="https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"
 MYSQL_APT_KEY_URL="https://repo.mysql.com/RPM-GPG-KEY-mysql-2025"
 MYSQL_WORKBENCH_APT_PACKAGE="mysql-workbench-community"
@@ -31,7 +32,11 @@ ASTRONVIM_CONFIG_DIR="$CONFIG_HOME/nvim"
 NVM_VERSION="v0.40.4"
 NVM_INSTALL_URL="https://raw.githubusercontent.com/nvm-sh/nvm/$NVM_VERSION/install.sh"
 NVM_DIR=${NVM_DIR:-"$HOME/.nvm"}
+OH_MY_ZSH_URL="https://github.com/ohmyzsh/ohmyzsh.git"
+OH_MY_ZSH_DIR=${ZSH:-"$HOME/.oh-my-zsh"}
 XSESSION_FILE=/usr/share/xsessions/i3-rice.desktop
+SHELL_ENV_SOURCE="$ROOT_DIR/config/shell/x11-session-env.sh"
+SHELL_ENV_TARGET="$HOME/.config/i3-rice/x11-session-env.sh"
 
 usage() {
     cat <<'EOF'
@@ -152,28 +157,85 @@ update_upgrade_system() {
     esac
 }
 
+is_apt_package_installed() {
+    dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -F "install ok installed" >/dev/null 2>&1
+}
+
+is_pacman_package_installed() {
+    pacman -Q "$1" >/dev/null 2>&1
+}
+
+all_apt_packages_installed() {
+    for package in "$@"; do
+        is_apt_package_installed "$package" || return 1
+    done
+
+    return 0
+}
+
+install_apt_packages() {
+    sudo_cmd=$(need_sudo)
+    packages=$*
+    missing_packages=
+
+    for package in $packages; do
+        if is_apt_package_installed "$package"; then
+            say "Already installed: $package"
+        else
+            missing_packages="$missing_packages $package"
+        fi
+    done
+
+    if [ -z "$missing_packages" ]; then
+        say "All apt packages already installed."
+        return 0
+    fi
+
+    if [ "$DRY_RUN" -eq 1 ]; then
+        say "Would run: $sudo_cmd apt-get install -y$missing_packages"
+    else
+        # shellcheck disable=SC2086
+        $sudo_cmd apt-get install -y $missing_packages
+    fi
+}
+
+install_pacman_packages() {
+    sudo_cmd=$(need_sudo)
+    packages=$*
+    missing_packages=
+
+    for package in $packages; do
+        if is_pacman_package_installed "$package"; then
+            say "Already installed: $package"
+        else
+            missing_packages="$missing_packages $package"
+        fi
+    done
+
+    if [ -z "$missing_packages" ]; then
+        say "All pacman packages already installed."
+        return 0
+    fi
+
+    if [ "$DRY_RUN" -eq 1 ]; then
+        say "Would run: $sudo_cmd pacman -S --needed --noconfirm$missing_packages"
+    else
+        # shellcheck disable=SC2086
+        $sudo_cmd pacman -S --needed --noconfirm $missing_packages
+    fi
+}
+
 install_dependencies() {
     manager=$(detect_package_manager) || die "unsupported distro: expected apt or pacman"
-    sudo_cmd=$(need_sudo)
 
     say "Package manager: $manager"
 
     case "$manager" in
         apt)
-            if [ "$DRY_RUN" -eq 1 ]; then
-                say "Would run: $sudo_cmd apt-get install -y $APT_PACKAGES"
-            else
-                # shellcheck disable=SC2086
-                $sudo_cmd apt-get install -y $APT_PACKAGES
-            fi
+            install_apt_packages $APT_PACKAGES
             ;;
         pacman)
-            if [ "$DRY_RUN" -eq 1 ]; then
-                say "Would run: $sudo_cmd pacman -S --needed --noconfirm $PACMAN_PACKAGES"
-            else
-                # shellcheck disable=SC2086
-                $sudo_cmd pacman -S --needed --noconfirm $PACMAN_PACKAGES
-            fi
+            install_pacman_packages $PACMAN_PACKAGES
             ;;
     esac
 }
@@ -231,11 +293,16 @@ install_docker_latest() {
             repo_id=$(docker_apt_repo_id)
             repo_suite=$(docker_apt_codename)
 
+            if all_apt_packages_installed $DOCKER_APT_PACKAGES; then
+                say "All Docker apt packages already installed."
+                return 0
+            fi
+
             if [ "$DRY_RUN" -eq 1 ]; then
                 say "Would remove conflicting Docker packages with apt if present"
                 say "Would install Docker apt repo: https://download.docker.com/linux/$repo_id ($repo_suite)"
                 say "Would run: $sudo_cmd apt-get update"
-                say "Would run: $sudo_cmd apt-get install -y $DOCKER_APT_PACKAGES"
+                install_apt_packages $DOCKER_APT_PACKAGES
             else
                 # shellcheck disable=SC2046
                 $sudo_cmd apt-get remove -y $(dpkg --get-selections docker.io docker-compose docker-compose-v2 docker-doc podman-docker containerd runc 2>/dev/null | cut -f1) || true
@@ -246,16 +313,11 @@ install_docker_latest() {
                 printf 'Types: deb\nURIs: https://download.docker.com/linux/%s\nSuites: %s\nComponents: stable\nArchitectures: %s\nSigned-By: /etc/apt/keyrings/docker.asc\n' "$repo_id" "$repo_suite" "$arch" \
                     | $sudo_cmd tee /etc/apt/sources.list.d/docker.sources >/dev/null
                 $sudo_cmd apt-get update
-                # shellcheck disable=SC2086
-                $sudo_cmd apt-get install -y $DOCKER_APT_PACKAGES
+                install_apt_packages $DOCKER_APT_PACKAGES
             fi
             ;;
         pacman)
-            if [ "$DRY_RUN" -eq 1 ]; then
-                say "Would install Docker and Docker Compose from Arch rolling packages"
-            else
-                $sudo_cmd pacman -S --needed --noconfirm docker docker-compose
-            fi
+            install_pacman_packages docker docker-compose
             ;;
     esac
 }
@@ -266,6 +328,11 @@ install_google_chrome() {
 
     case "$manager" in
         apt)
+            if is_apt_package_installed google-chrome-stable; then
+                say "Already installed: google-chrome-stable"
+                return 0
+            fi
+
             if [ "$DRY_RUN" -eq 1 ]; then
                 say "Would download Google Chrome: $CHROME_DEB_URL"
                 say "Would run: $sudo_cmd apt-get install -y ./google-chrome-stable_current_amd64.deb"
@@ -277,11 +344,7 @@ install_google_chrome() {
             fi
             ;;
         pacman)
-            if [ "$DRY_RUN" -eq 1 ]; then
-                say "Would build and install Google Chrome from AUR: https://aur.archlinux.org/google-chrome.git"
-            else
-                install_aur_package google-chrome
-            fi
+            install_aur_package google-chrome
             ;;
     esac
 }
@@ -292,6 +355,11 @@ install_mysql_workbench() {
 
     case "$manager" in
         apt)
+            if is_apt_package_installed "$MYSQL_WORKBENCH_APT_PACKAGE"; then
+                say "Already installed: $MYSQL_WORKBENCH_APT_PACKAGE"
+                return 0
+            fi
+
             repo_id=$(docker_apt_repo_id)
             repo_suite=$(mysql_workbench_apt_codename)
 
@@ -303,7 +371,7 @@ install_mysql_workbench() {
                 say "Would install MySQL APT key: $MYSQL_APT_KEY_URL"
                 say "Would install MySQL Workbench apt repo: http://repo.mysql.com/apt/ubuntu/ $repo_suite mysql-tools"
                 say "Would run: $sudo_cmd apt-get update"
-                say "Would run: $sudo_cmd apt-get install -y $MYSQL_WORKBENCH_APT_PACKAGE"
+                say "Would install $MYSQL_WORKBENCH_APT_PACKAGE if MySQL's apt repo provides it"
             else
                 $sudo_cmd install -m 0755 -d /etc/apt/keyrings
                 $sudo_cmd curl -fsSL "$MYSQL_APT_KEY_URL" -o /etc/apt/keyrings/mysql.asc
@@ -311,15 +379,15 @@ install_mysql_workbench() {
                 printf 'deb [arch=amd64 signed-by=/etc/apt/keyrings/mysql.asc] http://repo.mysql.com/apt/ubuntu/ %s mysql-tools\n' "$repo_suite" \
                     | $sudo_cmd tee /etc/apt/sources.list.d/mysql-workbench.list >/dev/null
                 $sudo_cmd apt-get update
-                $sudo_cmd apt-get install -y "$MYSQL_WORKBENCH_APT_PACKAGE"
+                if apt-cache show "$MYSQL_WORKBENCH_APT_PACKAGE" >/dev/null 2>&1; then
+                    install_apt_packages "$MYSQL_WORKBENCH_APT_PACKAGE"
+                else
+                    say "Skipping MySQL Workbench: $MYSQL_WORKBENCH_APT_PACKAGE is not available from MySQL's apt repo for $repo_suite"
+                fi
             fi
             ;;
         pacman)
-            if [ "$DRY_RUN" -eq 1 ]; then
-                say "Would run: $sudo_cmd pacman -S --needed --noconfirm mysql-workbench"
-            else
-                $sudo_cmd pacman -S --needed --noconfirm mysql-workbench
-            fi
+            install_pacman_packages mysql-workbench
             ;;
     esac
 }
@@ -327,6 +395,16 @@ install_mysql_workbench() {
 install_aur_package() {
     package=$1
     aur_user=${SUDO_USER:-${USER:-}}
+
+    if is_pacman_package_installed "$package"; then
+        say "Already installed: $package"
+        return 0
+    fi
+
+    if [ "$DRY_RUN" -eq 1 ]; then
+        say "Would build and install $package from AUR: https://aur.archlinux.org/$package.git"
+        return 0
+    fi
 
     [ -n "$aur_user" ] || die "could not determine non-root user for AUR install"
     [ "$aur_user" != root ] || die "AUR package builds must run as a non-root user"
@@ -399,6 +477,87 @@ run_php_post_install() {
     say "Enabled PHP MySQL and SQLite extensions: $php_ext_file"
 }
 
+set_zsh_default_shell() {
+    sudo_cmd=$(need_sudo)
+    zsh_path=$(command -v zsh || printf '')
+    shell_user=${SUDO_USER:-${USER:-}}
+
+    if [ -z "$shell_user" ] || [ "$shell_user" = root ]; then
+        shell_user=$(id -un)
+    fi
+
+    if [ -z "$zsh_path" ]; then
+        if [ "$DRY_RUN" -eq 1 ]; then
+            zsh_path=/usr/bin/zsh
+        else
+            die "zsh is not installed or not in PATH"
+        fi
+    fi
+
+    current_shell=$(getent passwd "$shell_user" 2>/dev/null | cut -d: -f7 || printf '')
+
+    if [ "$current_shell" = "$zsh_path" ]; then
+        say "Default shell already set to zsh for $shell_user: $zsh_path"
+        return 0
+    fi
+
+    if [ "$DRY_RUN" -eq 1 ]; then
+        say "Would set default shell for $shell_user to: $zsh_path"
+        return 0
+    fi
+
+    $sudo_cmd chsh -s "$zsh_path" "$shell_user"
+    say "Set default shell for $shell_user to: $zsh_path"
+}
+
+install_oh_my_zsh() {
+    if [ -d "$OH_MY_ZSH_DIR" ]; then
+        say "Already installed: Oh My Zsh at $OH_MY_ZSH_DIR"
+        return 0
+    fi
+
+    if [ "$DRY_RUN" -eq 1 ]; then
+        say "Would clone Oh My Zsh: $OH_MY_ZSH_URL -> $OH_MY_ZSH_DIR"
+        return 0
+    fi
+
+    command -v git >/dev/null 2>&1 || die "git is required to install Oh My Zsh"
+
+    git clone --depth 1 "$OH_MY_ZSH_URL" "$OH_MY_ZSH_DIR"
+    say "Installed Oh My Zsh: $OH_MY_ZSH_DIR"
+}
+
+configure_oh_my_zsh() {
+    zshrc=$HOME/.zshrc
+
+    if [ "$DRY_RUN" -eq 1 ]; then
+        say "Would ensure $zshrc loads Oh My Zsh from: $OH_MY_ZSH_DIR"
+        return 0
+    fi
+
+    touch "$zshrc"
+
+    if grep -F "oh-my-zsh.sh" "$zshrc" >/dev/null 2>&1; then
+        say "Already configured: $zshrc loads Oh My Zsh"
+        return 0
+    fi
+
+    {
+        printf '\n'
+        printf '# Oh My Zsh\n'
+        printf 'export ZSH="%s"\n' "$OH_MY_ZSH_DIR"
+        printf 'ZSH_THEME="${ZSH_THEME:-robbyrussell}"\n'
+        printf '[ -r "$ZSH/oh-my-zsh.sh" ] && . "$ZSH/oh-my-zsh.sh"\n'
+    } >>"$zshrc"
+
+    say "Updated Oh My Zsh config: $zshrc"
+}
+
+install_and_configure_oh_my_zsh() {
+    install_oh_my_zsh
+    configure_oh_my_zsh
+}
+
 autoremove_packages() {
     manager=$(detect_package_manager) || die "unsupported distro: expected apt or pacman"
     sudo_cmd=$(need_sudo)
@@ -464,6 +623,15 @@ install_nvm_node_lts() {
     if [ "$DRY_RUN" -eq 1 ]; then
         if [ -s "$NVM_DIR/nvm.sh" ]; then
             say "Would source NVM in installer shell: $NVM_DIR/nvm.sh"
+            export NVM_DIR
+            # shellcheck disable=SC1091
+            . "$NVM_DIR/nvm.sh"
+            installed_lts=$(nvm version 'lts/*' 2>/dev/null || printf 'N/A')
+            if [ "$installed_lts" != N/A ]; then
+                say "Already installed: Node.js LTS $installed_lts"
+                say "Would run: nvm alias default 'lts/*'"
+                return 0
+            fi
         else
             say "Would download NVM installer: $NVM_INSTALL_URL"
             say "Would run NVM installer with bash"
@@ -493,6 +661,13 @@ install_nvm_node_lts() {
     export NVM_DIR
     # shellcheck disable=SC1091
     . "$NVM_DIR/nvm.sh"
+    installed_lts=$(nvm version 'lts/*' 2>/dev/null || printf 'N/A')
+    if [ "$installed_lts" != N/A ]; then
+        say "Already installed: Node.js LTS $installed_lts"
+        nvm alias default 'lts/*'
+        return 0
+    fi
+
     nvm install --lts
     nvm alias default 'lts/*'
     say "Installed NVM $NVM_VERSION and Node.js LTS"
@@ -505,21 +680,57 @@ load_nvm() {
     . "$NVM_DIR/nvm.sh"
 }
 
+is_npm_global_package_installed() {
+    npm list -g "$1" --depth=0 >/dev/null 2>&1
+}
+
+install_npm_global_packages() {
+    missing_packages=
+
+    for package in $NPM_GLOBAL_PACKAGES; do
+        if is_npm_global_package_installed "$package"; then
+            say "Already installed: $package"
+        else
+            missing_packages="$missing_packages $package@latest"
+        fi
+    done
+
+    if [ -z "$missing_packages" ]; then
+        say "All global npm packages already installed."
+        return 0
+    fi
+
+    if [ "$DRY_RUN" -eq 1 ]; then
+        say "Would run: npm install -g$missing_packages"
+    else
+        # shellcheck disable=SC2086
+        npm install -g $missing_packages
+    fi
+}
+
 install_global_npm_tools() {
     if [ "$DRY_RUN" -eq 1 ]; then
         say "Would source NVM in installer shell: $NVM_DIR/nvm.sh"
-        say "Would run: npm install -g @openai/codex@latest @anthropic-ai/claude-code@latest opencode-ai@latest bun@latest"
+        if command -v npm >/dev/null 2>&1; then
+            install_npm_global_packages
+        else
+            say "Would run: npm install -g @openai/codex@latest @anthropic-ai/claude-code@latest opencode-ai@latest bun@latest"
+        fi
         return 0
     fi
 
     load_nvm
     command -v npm >/dev/null 2>&1 || die "npm is required to install Codex CLI and Bun globally"
-    npm install -g @openai/codex@latest @anthropic-ai/claude-code@latest opencode-ai@latest bun@latest
-    say "Installed global npm tools: @openai/codex@latest @anthropic-ai/claude-code@latest opencode-ai@latest bun@latest"
+    install_npm_global_packages
 }
 
 install_composer() {
     sudo_cmd=$(need_sudo)
+
+    if command -v composer >/dev/null 2>&1; then
+        say "Already installed: composer"
+        return 0
+    fi
 
     if [ "$DRY_RUN" -eq 1 ]; then
         say "Would download and verify Composer installer from getcomposer.org"
@@ -585,7 +796,7 @@ install_login_session() {
 [Desktop Entry]
 Name=i3 Rice
 Comment=Log in using i3 with this rice configuration
-Exec=env XDG_SESSION_TYPE=x11 WAYLAND_DISPLAY= i3
+Exec=env XDG_SESSION_TYPE=x11 QT_QPA_PLATFORM=xcb WAYLAND_DISPLAY= i3
 TryExec=i3
 Type=XSession
 X-LightDM-DesktopName=i3 Rice
@@ -602,6 +813,50 @@ EOF
 
     rm -f "$session_tmp"
     say "Installed login session: $XSESSION_FILE"
+}
+
+append_source_line() {
+    target_file=$1
+    source_file=$2
+    marker="i3-rice X11 session env"
+    source_line=". \"$source_file\""
+
+    if [ "$DRY_RUN" -eq 1 ]; then
+        say "Would ensure $target_file sources: $source_file"
+        return 0
+    fi
+
+    touch "$target_file"
+
+    if grep -F "$marker" "$target_file" >/dev/null 2>&1 || grep -F "$source_line" "$target_file" >/dev/null 2>&1; then
+        say "Already configured: $target_file"
+        return 0
+    fi
+
+    {
+        printf '\n'
+        printf '# %s\n' "$marker"
+        printf '[ -r "%s" ] && . "%s"\n' "$source_file" "$source_file"
+    } >>"$target_file"
+
+    say "Updated shell env: $target_file"
+}
+
+install_shell_env() {
+    [ -e "$SHELL_ENV_SOURCE" ] || die "missing source path: $SHELL_ENV_SOURCE"
+
+    if [ "$DRY_RUN" -eq 1 ]; then
+        say "Would copy: $SHELL_ENV_SOURCE -> $SHELL_ENV_TARGET"
+    else
+        mkdir -p "$(dirname "$SHELL_ENV_TARGET")"
+        cp "$SHELL_ENV_SOURCE" "$SHELL_ENV_TARGET"
+        say "Copied: $SHELL_ENV_SOURCE -> $SHELL_ENV_TARGET"
+    fi
+
+    append_source_line "$HOME/.zshrc" "$SHELL_ENV_TARGET"
+    append_source_line "$HOME/.profile" "$SHELL_ENV_TARGET"
+    append_source_line "$HOME/.zprofile" "$SHELL_ENV_TARGET"
+    append_source_line "$HOME/.xsessionrc" "$SHELL_ENV_TARGET"
 }
 
 confirm_replace() {
@@ -688,6 +943,7 @@ copy_configs() {
 
 if [ "$SESSION_ONLY" -eq 1 ]; then
     install_login_session
+    install_shell_env
     if [ "$DRY_RUN" -eq 1 ]; then
         say "Dry run complete; no files were changed."
     else
@@ -702,6 +958,8 @@ else
     DID_INSTALL=1
     update_upgrade_system
     install_dependencies
+    set_zsh_default_shell
+    install_and_configure_oh_my_zsh
     run_php_post_install
     install_docker_latest
     run_docker_post_install
@@ -716,6 +974,8 @@ fi
 install_login_session
 
 copy_configs
+
+install_shell_env
 
 if [ "$DID_INSTALL" -eq 1 ]; then
     autoremove_packages
