@@ -90,9 +90,9 @@ NVM is installed from the versioned upstream installer, sourced inside the insta
 
 Oh My Zsh is cloned from the upstream `ohmyzsh/ohmyzsh` repository into `~/.oh-my-zsh`, and `~/.zshrc` is updated to load it.
 
-Composer is installed from the upstream installer, verified against the official installer checksum, and written to `/usr/local/bin/composer`.
+Composer is installed from the upstream installer, verified against the official installer checksum, and written to `/usr/local/bin/composer`. After Composer is available, it globally installs Laravel's `laravel/installer` package.
 
-Some theme, font, PHP, Docker, Chrome, or MySQL Workbench package names vary by distro or repository setup. If dependency installation fails, install the missing package manually or rerun with `--no-install` to copy only configs. `--no-install` skips package installation, Chrome and MySQL Workbench setup, Docker setup, Nerd Font setup, NVM/Node setup, global npm tools, Composer, AstroNvim setup, compiler tools, and the display-manager session entry.
+Some theme, font, PHP, Docker, Chrome, or MySQL Workbench package names vary by distro or repository setup. If dependency installation fails, install the missing package manually or rerun with `--no-install` to copy only configs. `--no-install` skips package installation, Chrome and MySQL Workbench setup, Docker setup, Nerd Font setup, NVM/Node setup, global npm tools, Composer, Laravel installer setup, AstroNvim setup, compiler tools, and the display-manager session entry.
 
 ## Wallpaper Rotation
 

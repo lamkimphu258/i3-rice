@@ -19,6 +19,7 @@ APT_PACKAGES="xorg i3-wm i3blocks rofi kitty dunst picom feh xss-lock i3lock pla
 PACMAN_PACKAGES="xorg-server xorg-xinit i3-wm i3blocks rofi kitty dunst picom feh xss-lock i3lock playerctl brightnessctl pavucontrol upower network-manager-applet gsimplecal ttf-dejavu ttf-font-awesome noto-fonts-emoji arc-gtk-theme papirus-icon-theme base-devel ca-certificates curl unzip fontconfig git neovim ripgrep bash zsh nginx php php-fpm php-sqlite docker docker-compose vlc flameshot simplescreenrecorder obs-studio"
 DOCKER_APT_PACKAGES="docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin"
 NPM_GLOBAL_PACKAGES="@openai/codex @anthropic-ai/claude-code opencode-ai bun"
+COMPOSER_GLOBAL_PACKAGES="laravel/installer"
 CHROME_DEB_URL="https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"
 MYSQL_APT_KEY_URL="https://repo.mysql.com/RPM-GPG-KEY-mysql-2025"
 MYSQL_WORKBENCH_APT_PACKAGE="mysql-workbench-community"
@@ -755,6 +756,48 @@ install_composer() {
     say "Installed Composer: /usr/local/bin/composer"
 }
 
+is_composer_global_package_installed() {
+    composer global show "$1" >/dev/null 2>&1
+}
+
+install_composer_global_packages() {
+    missing_packages=
+
+    for package in $COMPOSER_GLOBAL_PACKAGES; do
+        if is_composer_global_package_installed "$package"; then
+            say "Already installed: $package"
+        else
+            missing_packages="$missing_packages $package"
+        fi
+    done
+
+    if [ -z "$missing_packages" ]; then
+        say "All global Composer packages already installed."
+        return 0
+    fi
+
+    if [ "$DRY_RUN" -eq 1 ]; then
+        say "Would run: composer global require$missing_packages"
+    else
+        # shellcheck disable=SC2086
+        composer global require $missing_packages
+    fi
+}
+
+install_global_composer_tools() {
+    if [ "$DRY_RUN" -eq 1 ]; then
+        if command -v composer >/dev/null 2>&1; then
+            install_composer_global_packages
+        else
+            say "Would run: composer global require laravel/installer"
+        fi
+        return 0
+    fi
+
+    command -v composer >/dev/null 2>&1 || die "composer is required to install Laravel globally"
+    install_composer_global_packages
+}
+
 install_astronvim() {
     if [ -e "$ASTRONVIM_CONFIG_DIR" ] || [ -L "$ASTRONVIM_CONFIG_DIR" ]; then
         if [ "$DRY_RUN" -eq 0 ] && ! confirm_replace "$ASTRONVIM_CONFIG_DIR"; then
@@ -968,6 +1011,7 @@ else
     install_nvm_node_lts
     install_global_npm_tools
     install_composer
+    install_global_composer_tools
     install_astronvim
 fi
 
