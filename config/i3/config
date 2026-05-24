@@ -1,7 +1,7 @@
 # Regolith-inspired native i3 config.
 
 set $mod Mod4
-set $x11env XDG_SESSION_TYPE=x11 QT_QPA_PLATFORM=xcb
+set $x11env -u WAYLAND_DISPLAY XDG_SESSION_TYPE=x11 QT_QPA_PLATFORM=xcb
 set $term kitty
 set $launcher rofi -config ~/.config/rofi/config.rasi -show drun -show-icons
 
