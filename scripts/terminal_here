@@ -1,0 +1,123 @@
+#!/bin/sh
+
+get_focused_pid() {
+    i3-msg -t get_tree 2>/dev/null | python3 -c '
+import json
+import sys
+
+
+def find_focused(node):
+    if not isinstance(node, dict):
+        return None
+    if node.get("focused"):
+        return node.get("pid")
+    for child in node.get("nodes", []):
+        found = find_focused(child)
+        if found is not None:
+            return found
+    for child in node.get("floating_nodes", []):
+        found = find_focused(child)
+        if found is not None:
+            return found
+    return None
+
+
+tree = json.load(sys.stdin)
+print(find_focused(tree) or "")
+'
+}
+
+read_pid_cwd() {
+    readlink -f "/proc/$1/cwd" 2>/dev/null || true
+}
+
+read_shell_child_cwd() {
+    focused_pid=$1
+    [ -z "$focused_pid" ] && return 0
+
+    focused_tty=$(readlink -f "/proc/$focused_pid/fd/0" 2>/dev/null)
+
+    [ -z "$focused_tty" ] && return 0
+
+    python3 - "$focused_pid" "$focused_tty" <<'PY'
+import os
+import sys
+from collections import deque
+
+root_pid = int(sys.argv[1])
+target_tty = sys.argv[2]
+shell_names = {"sh", "bash", "zsh", "fish", "ash", "dash"}
+cwd_candidates = []
+
+
+def get_parent_and_tty(pid):
+    stat_path = f"/proc/{pid}/stat"
+    with open(stat_path, "r") as f:
+        data = f.read()
+    # /proc/<pid>/stat format: pid (comm) state ppid ...
+    close = data.rfind(")")
+    ppid = int(data[close + 2 :].split()[1])
+
+    tty = ""
+    try:
+        tty = os.readlink(f"/proc/{pid}/fd/0")
+    except OSError:
+        tty = ""
+
+    return ppid, tty
+
+
+children = {}
+commands = {}
+ttys = {}
+
+for name in os.listdir("/proc"):
+    if not name.isdigit():
+        continue
+    pid = int(name)
+
+    try:
+        with open(f"/proc/{pid}/comm", "r") as f:
+            command = f.read().strip()
+        ppid, tty = get_parent_and_tty(pid)
+    except (OSError, ValueError):
+        continue
+
+    commands[pid] = command
+    ttys[pid] = tty
+    children.setdefault(ppid, []).append(pid)
+
+
+queue = deque([root_pid])
+while queue:
+    current = queue.popleft()
+    for child in children.get(current, []):
+        if ttys.get(child) == target_tty and commands.get(child, "").lower() in shell_names:
+            try:
+                child_cwd = os.path.realpath(f"/proc/{child}/cwd")
+            except OSError:
+                child_cwd = ""
+            if child_cwd:
+                cwd_candidates.append(child_cwd)
+        queue.append(child)
+
+for cwd in cwd_candidates:
+    print(cwd)
+    break
+PY
+}
+
+working_dir="$HOME"
+focused_pid=$(get_focused_pid)
+
+if [ -n "$focused_pid" ]; then
+    shell_cwd=$(read_shell_child_cwd "$focused_pid")
+    if [ -n "$shell_cwd" ]; then
+        working_dir=$shell_cwd
+    else
+        tree_cwd=$(read_pid_cwd "$focused_pid")
+        [ -n "$tree_cwd" ] && working_dir=$tree_cwd
+    fi
+fi
+
+ghostty --working-directory="$working_dir"

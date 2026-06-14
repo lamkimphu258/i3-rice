@@ -75,6 +75,46 @@ amixer_status() {
     '
 }
 
+mic_status() {
+    if command -v wpctl >/dev/null 2>&1; then
+        wpctl get-volume @DEFAULT_AUDIO_SOURCE@ 2>/dev/null | awk '
+            /MUTED/ {
+                print "muted";
+                found=1;
+                exit;
+            }
+            /Volume:/ {
+                printf "%d%%\n", ($2 * 100) + 0.5;
+                found=1;
+                exit;
+            }
+            END {
+                if (!found) print "n/a";
+            }
+        '
+    elif command -v pactl >/dev/null 2>&1; then
+        muted=$(pactl get-source-mute @DEFAULT_SOURCE@ 2>/dev/null | awk '{print $2}')
+        if [ "$muted" = yes ]; then
+            printf 'muted\n'
+        elif [ "$muted" = no ]; then
+            printf 'unmuted\n'
+        else
+            printf 'n/a\n'
+        fi
+    elif command -v amixer >/dev/null 2>&1; then
+        amixer get Capture 2>/dev/null | awk -F'[][]' '
+            /Capture/ { state=$4 }
+            END {
+                if (state == "off") print "muted";
+                else if (state == "on") print "unmuted";
+                else print "n/a";
+            }
+        '
+    else
+        printf 'n/a\n'
+    fi
+}
+
 case "${BLOCK_BUTTON:-}" in
     1)
         action=mute
@@ -135,6 +175,17 @@ case "$action" in
             amixer -q set Master toggle >/dev/null 2>&1 || true
         fi
         signal_bar
+        ;;
+    micmute)
+        if command -v wpctl >/dev/null 2>&1; then
+            wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle >/dev/null 2>&1 || true
+        elif command -v pactl >/dev/null 2>&1; then
+            pactl set-source-mute @DEFAULT_SOURCE@ toggle >/dev/null 2>&1 || true
+        elif command -v amixer >/dev/null 2>&1; then
+            amixer -q set Capture toggle >/dev/null 2>&1 || true
+        fi
+        mic_value=$(mic_status)
+        notify_action "Microphone" "$mic_value"
         ;;
     mixer)
         open_mixer

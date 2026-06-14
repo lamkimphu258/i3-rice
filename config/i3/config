@@ -2,7 +2,7 @@
 
 set $mod Mod4
 set $x11env -u WAYLAND_DISPLAY XDG_SESSION_TYPE=x11 QT_QPA_PLATFORM=xcb
-set $term kitty
+set $term ghostty
 set $launcher rofi -config ~/.config/rofi/config.rasi -show drun -show-icons
 
 font pango:JetBrainsMono Nerd Font, Inter, Noto Sans, FontAwesome 10
@@ -23,7 +23,7 @@ client.unfocused        #2e3440 #2e3440 #a7adba #2e3440 #2e3440
 client.urgent           #bf616a #bf616a #eceff4 #bf616a #bf616a
 client.placeholder      #000000 #1f232d #eceff4 #000000 #000000
 
-bindsym $mod+Return exec --no-startup-id env $x11env $term
+bindsym $mod+Return exec --no-startup-id env $x11env sh -c '${XDG_CONFIG_HOME:-$HOME/.config}/i3/scripts/terminal_here'
 bindsym $mod+space exec --no-startup-id env $x11env $launcher
 bindsym $mod+Shift+q kill
 bindsym $mod+Shift+c reload
@@ -111,11 +111,21 @@ bindsym $mod+Shift+0 move container to workspace number $ws10
 bindsym XF86AudioRaiseVolume exec --no-startup-id sh -c '${XDG_CONFIG_HOME:-$HOME/.config}/i3/scripts/volume up'
 bindsym XF86AudioLowerVolume exec --no-startup-id sh -c '${XDG_CONFIG_HOME:-$HOME/.config}/i3/scripts/volume down'
 bindsym XF86AudioMute exec --no-startup-id sh -c '${XDG_CONFIG_HOME:-$HOME/.config}/i3/scripts/volume mute'
+bindsym XF86AudioMicMute exec --no-startup-id sh -c '${XDG_CONFIG_HOME:-$HOME/.config}/i3/scripts/volume micmute'
 bindsym XF86MonBrightnessUp exec --no-startup-id sh -c '${XDG_CONFIG_HOME:-$HOME/.config}/i3/scripts/brightness up'
 bindsym XF86MonBrightnessDown exec --no-startup-id sh -c '${XDG_CONFIG_HOME:-$HOME/.config}/i3/scripts/brightness down'
+bindsym XF86KbdBrightnessUp exec --no-startup-id sh -c '${XDG_CONFIG_HOME:-$HOME/.config}/i3/scripts/fn kbd-backlight-up'
+bindsym XF86KbdBrightnessDown exec --no-startup-id sh -c '${XDG_CONFIG_HOME:-$HOME/.config}/i3/scripts/fn kbd-backlight-down'
 bindsym XF86AudioPlay exec --no-startup-id playerctl play-pause
 bindsym XF86AudioNext exec --no-startup-id playerctl next
 bindsym XF86AudioPrev exec --no-startup-id playerctl previous
+bindsym XF86TouchpadToggle exec --no-startup-id sh -c '${XDG_CONFIG_HOME:-$HOME/.config}/i3/scripts/fn touchpad-toggle'
+bindsym XF86Display exec --no-startup-id sh -c '${XDG_CONFIG_HOME:-$HOME/.config}/i3/scripts/fn display'
+bindsym XF86DisplayToggle exec --no-startup-id sh -c '${XDG_CONFIG_HOME:-$HOME/.config}/i3/scripts/fn display'
+bindsym XF86DisplayOff exec --no-startup-id sh -c '${XDG_CONFIG_HOME:-$HOME/.config}/i3/scripts/fn display-off'
+bindsym XF86WLAN exec --no-startup-id sh -c '${XDG_CONFIG_HOME:-$HOME/.config}/i3/scripts/fn wifi-toggle'
+bindsym XF86RFKill exec --no-startup-id sh -c '${XDG_CONFIG_HOME:-$HOME/.config}/i3/scripts/fn wifi-toggle'
+bindsym Print exec --no-startup-id flameshot gui
 
 assign [class="firefox"] $ws2
 for_window [class="Rofi"] border pixel 0

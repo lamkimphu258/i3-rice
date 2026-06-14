@@ -49,7 +49,7 @@ The installer copies configs into `${XDG_CONFIG_HOME:-$HOME/.config}`:
 - AstroNvim template -> `~/.config/nvim`
 - `config/i3` -> `~/.config/i3`
 - `config/i3blocks` -> `~/.config/i3blocks`
-- `config/kitty` -> `~/.config/kitty`
+- `config/ghostty` -> `~/.config/ghostty`
 - `config/rofi` -> `~/.config/rofi`
 - `config/dunst` -> `~/.config/dunst`
 - `config/picom` -> `~/.config/picom`
@@ -57,6 +57,8 @@ The installer copies configs into `${XDG_CONFIG_HOME:-$HOME/.config}`:
 - `scripts` -> `~/.config/i3/scripts`
 - `wallpapers` -> `~/.config/wallpapers`
 - `applications/google-chrome.desktop` -> `~/.local/share/applications/google-chrome.desktop`
+
+On systems that expose `x-terminal-emulator` through `update-alternatives`, the installer also switches that default to `ghostty` when registered.
 
 It also installs this display-manager session entry:
 
@@ -72,7 +74,7 @@ Existing targets are moved to:
 
 ## Package Notes
 
-The installer uses distro-native package names for i3, i3blocks, rofi, Kitty, dunst, picom, feh, xss-lock, i3lock, playerctl, brightnessctl, pavucontrol, upower, NetworkManager applet, a calendar popup helper, common fonts, Font Awesome, Arc GTK theme, Papirus icons, Git, curl, bash, zsh, Neovim, ripgrep, nginx, PHP-FPM, PHP XML, PHP SQLite, PHP MySQL, PHP mbstring, PHP cURL extensions, VLC, Flameshot, SimpleScreenRecorder, and OBS Studio.
+The installer uses distro-native package names for i3, i3blocks, rofi, Ghostty, dunst, picom, feh, xss-lock, i3lock, playerctl, brightnessctl, xinput, xrandr/xset utilities, pavucontrol, upower, NetworkManager applet, a calendar popup helper, common fonts, Font Awesome, Arc GTK theme, Papirus icons, Git, curl, bash, zsh, Neovim, ripgrep, nginx, PHP-FPM, PHP XML, PHP SQLite, PHP MySQL, PHP mbstring, PHP cURL extensions, VLC, Flameshot, SimpleScreenRecorder, and OBS Studio.
 
 Before installing packages, the installer updates package metadata and upgrades existing packages with `apt-get update && apt-get upgrade -y` or `pacman -Syu --noconfirm`. At the end, it runs `apt-get autoremove -y` on apt systems or removes orphaned packages on pacman systems.
 
@@ -128,15 +130,17 @@ After installing, reload i3 with `Super+Shift+r`.
 
 ## Key Bindings
 
-- `Super+Enter`: Kitty terminal
+- `Super+Enter`: Ghostty terminal
+- `Ctrl+Shift+T`: open a native Ghostty tab
 - `Super+Space`: rofi combined launcher for apps, commands, windows, SSH hosts, and files
 - `Super+Tab`: toggle focus between tiling and floating windows
 - `Super+Shift+q`: close focused window
 - `Super+Shift+x`: lock screen
 - `Super+Shift+s`: lock screen and suspend
+- Fn/media keys: volume, mute, microphone mute, display brightness, keyboard backlight, media playback, touchpad toggle, display auto-detect, Wi-Fi toggle, display off, and screenshot
 - i3blocks volume: scroll adjusts volume, left click toggles mute, right click opens the mixer
 - i3blocks brightness: scroll or left/right click adjusts brightness
-- i3blocks network: click opens the NetworkManager connection editor
+- i3blocks network: click opens the NetworkManager connection editor or `nmtui` in Ghostty
 - i3blocks battery: click shows battery details
 - i3blocks calendar: click toggles the calendar popup
 - `Super+1` through `Super+0`: switch workspaces

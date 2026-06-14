@@ -1,0 +1,162 @@
+#!/bin/sh
+
+notify_action() {
+    title=$1
+    body=$2
+
+    if command -v dunstify >/dev/null 2>&1; then
+        dunstify -a i3-fn -u low -r 9102 "$title" "$body" >/dev/null 2>&1 || true
+    elif command -v notify-send >/dev/null 2>&1; then
+        notify-send -a i3-fn -u low "$title" "$body" >/dev/null 2>&1 || true
+    fi
+}
+
+kbd_device() {
+    for path in /sys/class/leds/*::kbd_backlight /sys/class/leds/*:kbd_backlight; do
+        [ -r "$path/brightness" ] || continue
+        basename "$path"
+        return 0
+    done
+
+    return 1
+}
+
+kbd_level() {
+    device=$1
+    brightnessctl -d "$device" -m 2>/dev/null | awk -F, '{print $4; exit}'
+}
+
+kbd_backlight() {
+    direction=$1
+    device=$(kbd_device || true)
+
+    if [ -z "$device" ]; then
+        notify_action "Keyboard backlight" "No keyboard backlight device"
+        return 0
+    fi
+
+    case "$direction" in
+        up)
+            brightnessctl -q -d "$device" set +1 >/dev/null 2>&1 || true
+            ;;
+        down)
+            brightnessctl -q -d "$device" set 1- >/dev/null 2>&1 || true
+            ;;
+    esac
+
+    value=$(kbd_level "$device")
+    [ -n "$value" ] || value=changed
+    notify_action "Keyboard backlight" "$value"
+}
+
+touchpad_id() {
+    command -v xinput >/dev/null 2>&1 || return 1
+
+    xinput list 2>/dev/null | awk '
+        {
+            line=tolower($0)
+            if (line ~ /touchpad/ || line ~ /trackpad/) {
+                sub(/^.*id=/, "")
+                sub(/[[:space:]].*$/, "")
+                print
+                exit
+            }
+        }
+    '
+}
+
+touchpad_toggle() {
+    id=$(touchpad_id)
+
+    if [ -z "$id" ]; then
+        notify_action "Touchpad" "No touchpad found"
+        return 0
+    fi
+
+    enabled=$(xinput list-props "$id" 2>/dev/null | awk '/Device Enabled/ {print $NF; exit}')
+
+    case "$enabled" in
+        1)
+            xinput disable "$id" >/dev/null 2>&1 || true
+            notify_action "Touchpad" "Disabled"
+            ;;
+        0)
+            xinput enable "$id" >/dev/null 2>&1 || true
+            notify_action "Touchpad" "Enabled"
+            ;;
+        *)
+            notify_action "Touchpad" "Could not read state"
+            ;;
+    esac
+}
+
+display_menu() {
+    if command -v arandr >/dev/null 2>&1; then
+        arandr >/dev/null 2>&1 &
+        return 0
+    fi
+
+    if command -v xrandr >/dev/null 2>&1; then
+        xrandr --auto >/dev/null 2>&1 || true
+        notify_action "Display" "Auto-detected outputs"
+        return 0
+    fi
+
+    notify_action "Display" "xrandr is not installed"
+}
+
+display_off() {
+    if command -v xset >/dev/null 2>&1; then
+        xset dpms force off >/dev/null 2>&1 || true
+        return 0
+    fi
+
+    notify_action "Display" "xset is not installed"
+}
+
+wifi_toggle() {
+    if ! command -v nmcli >/dev/null 2>&1; then
+        notify_action "Wi-Fi" "nmcli is not installed"
+        return 0
+    fi
+
+    state=$(nmcli -t -f WIFI general 2>/dev/null | awk -F: 'NR == 1 {print $1}')
+
+    case "$state" in
+        enabled)
+            nmcli radio wifi off >/dev/null 2>&1 || true
+            notify_action "Wi-Fi" "Disabled"
+            ;;
+        disabled)
+            nmcli radio wifi on >/dev/null 2>&1 || true
+            notify_action "Wi-Fi" "Enabled"
+            ;;
+        *)
+            notify_action "Wi-Fi" "Could not read state"
+            ;;
+    esac
+}
+
+case "${1:-}" in
+    kbd-backlight-up)
+        kbd_backlight up
+        ;;
+    kbd-backlight-down)
+        kbd_backlight down
+        ;;
+    touchpad-toggle)
+        touchpad_toggle
+        ;;
+    display)
+        display_menu
+        ;;
+    display-off)
+        display_off
+        ;;
+    wifi-toggle)
+        wifi_toggle
+        ;;
+    *)
+        notify_action "Fn key" "Unsupported action"
+        ;;
+esac

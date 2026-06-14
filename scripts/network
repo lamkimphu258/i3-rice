@@ -3,8 +3,8 @@
 open_network() {
     if command -v nm-connection-editor >/dev/null 2>&1; then
         nm-connection-editor >/dev/null 2>&1 &
-    elif command -v nmtui >/dev/null 2>&1 && command -v kitty >/dev/null 2>&1; then
-        kitty -e nmtui >/dev/null 2>&1 &
+    elif command -v nmtui >/dev/null 2>&1 && command -v ghostty >/dev/null 2>&1; then
+        ghostty -e nmtui >/dev/null 2>&1 &
     elif command -v nmtui >/dev/null 2>&1; then
         nmtui >/dev/null 2>&1 &
     fi

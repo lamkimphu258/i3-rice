@@ -10,13 +10,14 @@ DID_INSTALL=0
 
 ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 CONFIG_HOME=${XDG_CONFIG_HOME:-"$HOME/.config"}
+DATA_HOME=${XDG_DATA_HOME:-"$HOME/.local/share"}
 BACKUP_ROOT=${I3_RICE_BACKUP_ROOT:-"$HOME/.config-backup"}
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 BACKUP_DIR=$BACKUP_ROOT/i3-rice-$TIMESTAMP
 BACKUP_CREATED=0
 
-APT_PACKAGES="xorg i3-wm i3blocks rofi kitty dunst picom feh xss-lock i3lock playerctl brightnessctl pavucontrol upower network-manager-gnome gsimplecal fonts-dejavu fonts-font-awesome fonts-noto-color-emoji arc-theme papirus-icon-theme build-essential ca-certificates curl unzip fontconfig git neovim ripgrep bash zsh nginx php-cli php-fpm php-xml php-sqlite3 php-mysql php-mbstring php-curl vlc flameshot simplescreenrecorder obs-studio"
-PACMAN_PACKAGES="xorg-server xorg-xinit i3-wm i3blocks rofi kitty dunst picom feh xss-lock i3lock playerctl brightnessctl pavucontrol upower network-manager-applet gsimplecal ttf-dejavu ttf-font-awesome noto-fonts-emoji arc-gtk-theme papirus-icon-theme base-devel ca-certificates curl unzip fontconfig git neovim ripgrep bash zsh nginx php php-fpm php-sqlite docker docker-compose vlc flameshot simplescreenrecorder obs-studio"
+APT_PACKAGES="xorg x11-xserver-utils i3-wm i3blocks rofi ghostty dunst picom feh xss-lock i3lock playerctl brightnessctl xinput pavucontrol upower network-manager-gnome gsimplecal fonts-dejavu fonts-font-awesome fonts-noto-color-emoji arc-theme papirus-icon-theme build-essential ca-certificates curl unzip fontconfig git neovim ripgrep bash zsh nginx php-cli php-fpm php-xml php-sqlite3 php-mysql php-mbstring php-curl vlc flameshot simplescreenrecorder obs-studio"
+PACMAN_PACKAGES="xorg-server xorg-xinit xorg-xinput xorg-xrandr xorg-xset i3-wm i3blocks rofi ghostty dunst picom feh xss-lock i3lock playerctl brightnessctl pavucontrol upower network-manager-applet gsimplecal ttf-dejavu ttf-font-awesome noto-fonts-emoji arc-gtk-theme papirus-icon-theme base-devel ca-certificates curl unzip fontconfig git neovim ripgrep bash zsh nginx php php-fpm php-sqlite docker docker-compose vlc flameshot simplescreenrecorder obs-studio"
 DOCKER_APT_PACKAGES="docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin"
 NPM_GLOBAL_PACKAGES="@openai/codex @anthropic-ai/claude-code opencode-ai bun"
 COMPOSER_GLOBAL_PACKAGES="laravel/installer"
@@ -239,6 +240,45 @@ install_dependencies() {
             install_pacman_packages $PACMAN_PACKAGES
             ;;
     esac
+}
+
+set_ghostty_default_terminal() {
+    sudo_cmd=$(need_sudo)
+
+    if ! command -v update-alternatives >/dev/null 2>&1; then
+        say "Skipping default terminal setup: update-alternatives not available."
+        return 0
+    fi
+
+    if ! command -v ghostty >/dev/null 2>&1; then
+        say "Skipping default terminal setup: ghostty not installed."
+        return 0
+    fi
+
+    if ! update-alternatives --query x-terminal-emulator >/dev/null 2>&1; then
+        say "Skipping default terminal setup: x-terminal-emulator is not managed here."
+        return 0
+    fi
+
+    ghostty_path=$(command -v ghostty)
+    current_terminal=$(update-alternatives --query x-terminal-emulator 2>/dev/null | awk '/^Value: / { print $2; exit }')
+
+    if [ "$current_terminal" = "$ghostty_path" ]; then
+        say "Default terminal already set to: $ghostty_path"
+        return 0
+    fi
+
+    if ! update-alternatives --list x-terminal-emulator 2>/dev/null | grep -Fx "$ghostty_path" >/dev/null 2>&1; then
+        say "Skipping default terminal setup: $ghostty_path is not registered for x-terminal-emulator."
+        return 0
+    fi
+
+    if [ "$DRY_RUN" -eq 1 ]; then
+        say "Would run: $sudo_cmd update-alternatives --set x-terminal-emulator $ghostty_path"
+    else
+        $sudo_cmd update-alternatives --set x-terminal-emulator "$ghostty_path"
+        say "Default terminal set to: $ghostty_path"
+    fi
 }
 
 docker_apt_repo_id() {
@@ -905,23 +945,7 @@ install_shell_env() {
 }
 
 confirm_replace() {
-    target=$1
-
-    if [ "$FORCE" -eq 1 ]; then
-        return 0
-    fi
-
-    printf 'Replace existing %s? A backup will be made. [y/N] ' "$target"
-    read answer || answer=
-
-    case "$answer" in
-        y|Y|yes|YES|Yes)
-            return 0
-            ;;
-        *)
-            return 1
-            ;;
-    esac
+    return 0
 }
 
 backup_target() {
@@ -969,11 +993,12 @@ copy_path() {
 
 copy_configs() {
     say "Config home: $CONFIG_HOME"
+    say "Data home: $DATA_HOME"
     say "Backup path: $BACKUP_DIR"
 
     copy_path "$ROOT_DIR/config/i3" "$CONFIG_HOME/i3" "i3"
     copy_path "$ROOT_DIR/config/i3blocks" "$CONFIG_HOME/i3blocks" "i3blocks"
-    copy_path "$ROOT_DIR/config/kitty" "$CONFIG_HOME/kitty" "kitty"
+    copy_path "$ROOT_DIR/config/ghostty" "$CONFIG_HOME/ghostty" "ghostty"
     copy_path "$ROOT_DIR/config/rofi" "$CONFIG_HOME/rofi" "rofi"
     copy_path "$ROOT_DIR/config/dunst" "$CONFIG_HOME/dunst" "dunst"
     copy_path "$ROOT_DIR/config/picom" "$CONFIG_HOME/picom" "picom"
@@ -1003,6 +1028,7 @@ else
     DID_INSTALL=1
     update_upgrade_system
     install_dependencies
+    set_ghostty_default_terminal
     set_zsh_default_shell
     install_and_configure_oh_my_zsh
     run_php_post_install
